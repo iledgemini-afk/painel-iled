@@ -1,0 +1,2120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>ILED · Painel Operacional</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<style>
+:root{
+  /* ============ BASE ============ */
+  --bg:#000000;
+  --bg-elev:#0a0a0c;
+  --bg-elev-2:#111114;
+
+  /* ============ GLASS LAYERS (Apple-style) ============ */
+  --glass:rgba(255,255,255,0.04);
+  --glass-hover:rgba(255,255,255,0.06);
+  --glass-strong:rgba(255,255,255,0.08);
+  --glass-border:rgba(255,255,255,0.08);
+  --glass-border-strong:rgba(255,255,255,0.14);
+  --glass-shine:rgba(255,255,255,0.06);
+  --glass-blur:saturate(180%) blur(20px);
+  --glass-blur-strong:saturate(180%) blur(40px);
+
+  /* ============ TEXT ============ */
+  --text:#ffffff;
+  --text-2:rgba(255,255,255,0.65);
+  --text-3:rgba(255,255,255,0.40);
+  --text-4:rgba(255,255,255,0.22);
+
+  /* ============ BRAND ============ */
+  --brand:#FF1F44;             /* vermelho ILED, ajustado para LED neon */
+  --brand-soft:rgba(255,31,68,0.14);
+  --brand-glow:rgba(255,31,68,0.45);
+
+  /* ============ RGB stripe da logo (acentos secundários) ============ */
+  --rgb-red:#FF3B30;
+  --rgb-yellow:#FFCC00;
+  --rgb-blue:#0A84FF;
+
+  /* ============ Apple System Colors (dark) ============ */
+  --sys-green:#30D158;
+  --sys-orange:#FF9F0A;
+  --sys-purple:#BF5AF2;
+  --sys-pink:#FF375F;
+  --sys-teal:#64D2FF;
+
+  /* ============ TYPE ============ */
+  --f-display:"Bricolage Grotesque",system-ui,sans-serif;
+  --f-body:"Geist","Inter",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,monospace;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--f-body);
+  min-height:100vh;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+  font-feature-settings:"ss01","cv01";
+}
+
+/* ============ ATMOSPHERIC BACKGROUND ============ */
+body::before{
+  content:"";
+  position:fixed;inset:0;
+  background:
+    radial-gradient(ellipse 900px 700px at 12% -10%, rgba(255,31,68,0.22), transparent 55%),
+    radial-gradient(ellipse 800px 600px at 90% 110%, rgba(10,132,255,0.14), transparent 55%),
+    radial-gradient(ellipse 1100px 900px at 50% 50%, rgba(255,204,0,0.04), transparent 70%);
+  pointer-events:none;
+  z-index:0;
+}
+body::after{
+  /* subtle grain */
+  content:"";
+  position:fixed;inset:0;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.045 0'/></filter><rect width='100' height='100' filter='url(%23n)'/></svg>");
+  opacity:.5;
+  mix-blend-mode:overlay;
+  pointer-events:none;
+  z-index:1;
+}
+
+/* ============ TOPBAR ============ */
+.topbar{
+  position:fixed;top:0;left:0;right:0;height:68px;
+  background:rgba(0,0,0,0.55);
+  backdrop-filter:var(--glass-blur-strong);
+  -webkit-backdrop-filter:var(--glass-blur-strong);
+  border-bottom:1px solid var(--glass-border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 32px;z-index:100;
+}
+.brand{display:flex;align-items:center;gap:18px}
+.logo-iled-img{
+  height:42px;width:auto;
+  display:block;
+  filter:drop-shadow(0 0 14px rgba(255,255,255,0.20)) drop-shadow(0 0 24px rgba(255,31,68,0.12));
+  user-select:none;-webkit-user-drag:none;
+}
+.brand-divider{
+  width:1px;height:28px;background:var(--glass-border-strong);
+}
+.brand-text h1{
+  font-family:var(--f-display);font-weight:700;font-size:14px;
+  letter-spacing:.4px;line-height:1;
+}
+.brand-text .subtitle{
+  font-family:var(--f-mono);font-size:10px;color:var(--text-3);
+  letter-spacing:1.8px;text-transform:uppercase;
+}
+
+.header-right{display:flex;align-items:center;gap:12px}
+.status{
+  font-family:var(--f-mono);font-size:10.5px;color:var(--text-2);
+  text-transform:uppercase;letter-spacing:1.2px;
+  display:flex;align-items:center;gap:9px;
+  padding:8px 14px;border-radius:999px;
+  background:var(--glass);
+  backdrop-filter:var(--glass-blur);
+  -webkit-backdrop-filter:var(--glass-blur);
+  border:1px solid var(--glass-border);
+  transition:background .2s;
+}
+.status:hover{background:var(--glass-hover)}
+.status::before{
+  content:"";width:6px;height:6px;border-radius:50%;
+  background:var(--sys-green);
+  box-shadow:0 0 8px var(--sys-green), 0 0 14px var(--sys-green);
+  animation:pulse 2.4s infinite;
+}
+.status.loading::before{background:var(--rgb-yellow);box-shadow:0 0 8px var(--rgb-yellow), 0 0 14px var(--rgb-yellow)}
+.status.error::before{background:var(--brand);box-shadow:0 0 8px var(--brand), 0 0 14px var(--brand)}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.85)}}
+
+.btn-reload,.btn-upload{
+  background:var(--glass);
+  backdrop-filter:var(--glass-blur);
+  -webkit-backdrop-filter:var(--glass-blur);
+  border:1px solid var(--glass-border);
+  color:var(--text);width:38px;height:38px;border-radius:11px;
+  cursor:pointer;display:grid;place-items:center;font-size:15px;
+  transition:all .25s cubic-bezier(.2,.7,.3,1);
+  box-shadow:inset 0 1px 0 var(--glass-shine);
+}
+.btn-reload:hover,.btn-upload:hover{
+  background:var(--glass-hover);
+  border-color:var(--glass-border-strong);
+  transform:translateY(-1px);
+}
+.btn-reload:active,.btn-upload:active{transform:translateY(0) scale(.96)}
+
+/* ============ SIDE NAV ============ */
+.slide-nav{
+  position:fixed;left:24px;top:50%;transform:translateY(-50%);
+  display:flex;flex-direction:column;gap:4px;z-index:50;
+  background:rgba(0,0,0,0.4);
+  backdrop-filter:var(--glass-blur);
+  -webkit-backdrop-filter:var(--glass-blur);
+  border:1px solid var(--glass-border);
+  border-radius:18px;
+  padding:10px 8px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 var(--glass-shine);
+}
+.slide-nav button{
+  background:transparent;border:none;cursor:pointer;
+  font-family:var(--f-mono);font-size:9.5px;color:var(--text-3);
+  padding:8px 14px;letter-spacing:1px;
+  border-radius:10px;
+  transition:all .25s cubic-bezier(.2,.7,.3,1);
+  text-align:left;font-weight:500;
+  position:relative;
+  min-width:130px;
+}
+.slide-nav button::before{
+  content:"";position:absolute;left:6px;top:50%;transform:translateY(-50%);
+  width:3px;height:0;background:var(--brand);border-radius:2px;
+  transition:height .25s;
+  box-shadow:0 0 8px var(--brand-glow);
+}
+.slide-nav button:hover{color:var(--text-2);background:var(--glass)}
+.slide-nav button.active{
+  color:var(--text);
+  background:var(--glass-strong);
+  font-weight:700;
+}
+.slide-nav button.active::before{height:18px}
+
+/* ============ SLIDES ============ */
+.slides-wrap{padding:68px 0 88px;min-height:100vh;position:relative;z-index:2}
+.slide{
+  display:none;
+  padding:44px 56px 44px 200px;
+  min-height:calc(100vh - 156px);
+  animation:slideIn .55s cubic-bezier(.2,.7,.3,1);
+}
+.slide.active{display:block}
+@keyframes slideIn{
+  from{opacity:0;transform:translateY(16px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+.slide-header{
+  display:flex;align-items:baseline;justify-content:space-between;
+  padding-bottom:24px;margin-bottom:32px;
+  border-bottom:1px solid var(--glass-border);
+}
+.slide-num{
+  font-family:var(--f-mono);font-size:11px;color:var(--text-3);
+  letter-spacing:2.5px;font-weight:500;
+}
+.slide-num .total{color:var(--text-4)}
+.slide-title{
+  font-family:var(--f-display);font-weight:700;font-size:42px;
+  letter-spacing:-1px;line-height:1;flex:1;padding:0 32px;
+}
+.slide-title em{
+  font-style:italic;font-weight:600;
+  background:linear-gradient(135deg, var(--brand) 0%, #ff6b85 100%);
+  -webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;
+  position:relative;
+}
+.slide-meta{
+  font-family:var(--f-mono);font-size:10px;color:var(--text-3);
+  letter-spacing:1.6px;text-transform:uppercase;text-align:right;
+}
+
+/* ============ GLASS CARD BASE ============ */
+.glass-card,.kpi,.chart-card,.heatmap,.compare-card,.insight,.scenario,.hero-main,.hero-side .kpi{
+  background:var(--glass);
+  backdrop-filter:var(--glass-blur);
+  -webkit-backdrop-filter:var(--glass-blur);
+  border:1px solid var(--glass-border);
+  border-radius:20px;
+  box-shadow:
+    0 1px 0 var(--glass-shine) inset,
+    0 8px 24px rgba(0,0,0,0.35);
+  transition:transform .35s cubic-bezier(.2,.7,.3,1), border-color .25s, background .25s;
+  position:relative;
+  overflow:hidden;
+}
+.glass-card::before,.kpi::before,.chart-card::before,.compare-card::before,.insight::before,.scenario::before,.hero-main::before,.hero-side .kpi::before{
+  content:"";position:absolute;top:0;left:10%;right:10%;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.14),transparent);
+  pointer-events:none;
+}
+.kpi:hover,.insight:hover,.chart-card:hover,.compare-card:hover{
+  border-color:var(--glass-border-strong);
+}
+
+/* ============ KPI ============ */
+.kpi-grid{display:grid;gap:16px;margin-bottom:20px}
+.kpi-grid.cols-4{grid-template-columns:repeat(4,1fr)}
+.kpi-grid.cols-3{grid-template-columns:repeat(3,1fr)}
+.kpi-grid.cols-2{grid-template-columns:repeat(2,1fr)}
+.kpi{padding:22px 24px}
+.kpi-label{
+  font-family:var(--f-mono);font-size:10px;color:var(--text-3);
+  text-transform:uppercase;letter-spacing:2px;margin-bottom:14px;
+  font-weight:500;
+}
+.kpi-value{
+  font-family:var(--f-display);font-weight:800;font-size:44px;
+  line-height:1;letter-spacing:-1.5px;margin-bottom:8px;
+}
+.kpi-value .unit{
+  font-size:16px;color:var(--text-3);font-weight:500;margin-left:5px;letter-spacing:0;
+}
+.kpi-sub{
+  font-size:12px;color:var(--text-2);font-weight:400;
+}
+.kpi-sub .up{color:var(--sys-green);font-weight:500}
+.kpi-sub .down{color:var(--brand);font-weight:500}
+.kpi.accent-red{
+  background:linear-gradient(135deg, rgba(255,31,68,0.10), var(--glass) 70%);
+  border-color:rgba(255,31,68,0.22);
+}
+.kpi.accent-red .kpi-value{color:#FF5478}
+.kpi.accent-blue{
+  background:linear-gradient(135deg, rgba(10,132,255,0.10), var(--glass) 70%);
+  border-color:rgba(10,132,255,0.22);
+}
+.kpi.accent-blue .kpi-value{color:#5AB0FF}
+.kpi.accent-yellow{
+  background:linear-gradient(135deg, rgba(255,204,0,0.08), var(--glass) 70%);
+  border-color:rgba(255,204,0,0.20);
+}
+.kpi.accent-yellow .kpi-value{color:#FFD84D}
+.kpi.accent-green .kpi-value{color:var(--sys-green)}
+
+/* ============ HERO / CAPA ============ */
+.hero{display:grid;grid-template-columns:1.25fr .75fr;gap:18px;margin-top:12px}
+.hero-main{padding:44px 44px 40px;position:relative;min-height:380px}
+.hero-main::after{
+  content:"";position:absolute;top:-30%;right:-15%;
+  width:480px;height:480px;
+  background:radial-gradient(circle, var(--brand-soft), transparent 65%);
+  filter:blur(40px);
+  pointer-events:none;
+}
+.hero-eyebrow{
+  font-family:var(--f-mono);font-size:11px;color:var(--brand);
+  letter-spacing:3px;text-transform:uppercase;margin-bottom:18px;
+  font-weight:600;display:inline-flex;align-items:center;gap:8px;
+  position:relative;z-index:2;
+}
+.hero-eyebrow::before{
+  content:"";width:5px;height:5px;border-radius:50%;background:var(--brand);
+  box-shadow:0 0 8px var(--brand-glow);
+}
+.hero-headline{
+  font-family:var(--f-display);font-weight:800;font-size:58px;
+  line-height:.96;letter-spacing:-2.2px;margin-bottom:28px;
+  position:relative;z-index:2;
+}
+.hero-headline em{
+  font-style:italic;font-weight:600;
+  background:linear-gradient(135deg, var(--brand) 0%, #ff8da3 60%, #ffd6df 100%);
+  -webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+.hero-number{
+  font-family:var(--f-display);font-weight:800;font-size:120px;
+  line-height:1;letter-spacing:-5px;
+  background:linear-gradient(180deg, #ffffff 20%, rgba(255,255,255,0.45) 100%);
+  -webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;
+  position:relative;z-index:2;
+}
+.hero-number .unit{
+  font-size:22px;color:var(--text-3);
+  -webkit-text-fill-color:var(--text-3);font-weight:500;letter-spacing:-.5px;
+}
+.hero-desc{
+  font-size:13px;color:var(--text-2);line-height:1.65;margin-top:20px;
+  max-width:480px;position:relative;z-index:2;
+}
+.hero-side{display:flex;flex-direction:column;gap:14px}
+.hero-side .kpi{padding:20px 22px}
+.hero-side .kpi-value{font-size:34px}
+
+/* ============ CHARTS ============ */
+.chart-grid{display:grid;gap:18px}
+.chart-grid.cols-2{grid-template-columns:1.5fr 1fr}
+.chart-grid.cols-3{grid-template-columns:repeat(3,1fr)}
+.chart-card{padding:24px 26px}
+.chart-title{
+  font-family:var(--f-display);font-weight:700;font-size:17px;
+  letter-spacing:-.3px;margin-bottom:5px;
+}
+.chart-sub{
+  font-family:var(--f-mono);font-size:10px;color:var(--text-3);
+  letter-spacing:1.8px;text-transform:uppercase;margin-bottom:22px;
+  font-weight:500;
+}
+.chart-canvas-wrap{position:relative;height:340px}
+.chart-canvas-wrap.tall{height:420px}
+.chart-canvas-wrap.short{height:240px}
+
+/* ============ HEATMAP ============ */
+.heatmap{padding:30px 32px}
+.heatmap-grid{
+  display:grid;grid-template-columns:170px repeat(12,1fr);
+  gap:5px;font-family:var(--f-mono);font-size:11px;
+}
+.heatmap-grid .h-header{
+  color:var(--text-3);text-align:center;padding:10px 4px;
+  letter-spacing:1.2px;text-transform:uppercase;font-size:9.5px;font-weight:500;
+}
+.heatmap-grid .h-label{
+  color:var(--text);padding:14px 12px;font-size:11px;
+  font-weight:500;display:flex;align-items:center;
+  letter-spacing:.5px;
+}
+.heatmap-grid .h-cell{
+  height:54px;border-radius:10px;display:grid;place-items:center;
+  font-weight:700;font-size:11px;color:#fff;
+  background:rgba(255,255,255,0.02);
+  border:1px solid var(--glass-border);
+  transition:transform .2s cubic-bezier(.2,.7,.3,1);
+  cursor:default;backdrop-filter:blur(8px);
+}
+.heatmap-grid .h-cell:hover{transform:scale(1.08);z-index:2;border-color:var(--glass-border-strong)}
+.heatmap-legend{
+  display:flex;align-items:center;gap:14px;margin-top:26px;
+  font-family:var(--f-mono);font-size:10px;color:var(--text-3);
+  text-transform:uppercase;letter-spacing:1.5px;
+}
+.legend-gradient{
+  width:240px;height:8px;border-radius:99px;
+  background:linear-gradient(90deg, rgba(255,255,255,0.04), var(--rgb-yellow) 50%, var(--brand) 100%);
+  box-shadow:0 0 12px rgba(255,31,68,0.2);
+}
+
+/* ============ INSIGHTS ============ */
+.insights{display:grid;gap:14px}
+.insights.cols-2{grid-template-columns:1fr 1fr}
+.insights.cols-3{grid-template-columns:repeat(3,1fr)}
+.insight{padding:22px 24px}
+.insight-tag{
+  display:inline-flex;align-items:center;gap:6px;
+  font-family:var(--f-mono);font-size:9px;
+  letter-spacing:2px;text-transform:uppercase;padding:5px 10px;
+  border-radius:999px;margin-bottom:14px;font-weight:600;
+  border:1px solid transparent;
+}
+.insight-tag::before{
+  content:"";width:5px;height:5px;border-radius:50%;
+}
+.insight-tag.alert{background:rgba(255,31,68,0.10);color:#FF5478;border-color:rgba(255,31,68,0.22)}
+.insight-tag.alert::before{background:#FF5478;box-shadow:0 0 6px #FF5478}
+.insight-tag.info{background:rgba(10,132,255,0.10);color:#5AB0FF;border-color:rgba(10,132,255,0.22)}
+.insight-tag.info::before{background:#5AB0FF;box-shadow:0 0 6px #5AB0FF}
+.insight-tag.warn{background:rgba(255,204,0,0.10);color:#FFD84D;border-color:rgba(255,204,0,0.22)}
+.insight-tag.warn::before{background:#FFD84D;box-shadow:0 0 6px #FFD84D}
+.insight-tag.good{background:rgba(48,209,88,0.10);color:var(--sys-green);border-color:rgba(48,209,88,0.22)}
+.insight-tag.good::before{background:var(--sys-green);box-shadow:0 0 6px var(--sys-green)}
+.insight h4{
+  font-family:var(--f-display);font-weight:700;font-size:18px;
+  margin-bottom:10px;line-height:1.25;letter-spacing:-.3px;
+}
+.insight p{
+  font-size:12.5px;color:var(--text-2);line-height:1.6;
+}
+.insight p strong{color:var(--text);font-weight:600}
+.insight .big-num{
+  font-family:var(--f-display);font-weight:800;font-size:40px;
+  line-height:1;color:var(--text);margin:10px 0;letter-spacing:-1.2px;
+}
+.insight .big-num.red{color:#FF5478}
+.insight .big-num.blue{color:#5AB0FF}
+.insight .big-num.amber{color:#FFD84D}
+
+/* ============ TABLES ============ */
+.data-table{
+  width:100%;border-collapse:collapse;
+  font-family:var(--f-body);font-size:13px;
+}
+.data-table th{
+  font-family:var(--f-mono);font-size:9.5px;color:var(--text-3);
+  text-transform:uppercase;letter-spacing:1.8px;
+  text-align:left;padding:13px 16px;border-bottom:1px solid var(--glass-border);
+  font-weight:500;
+}
+.data-table td{
+  padding:13px 16px;border-bottom:1px solid var(--glass-border);
+  vertical-align:middle;color:var(--text-2);
+}
+.data-table tr:hover td{background:var(--glass)}
+.data-table td.num{font-family:var(--f-mono);font-weight:500;text-align:right;color:var(--text)}
+.data-table td.bold{font-weight:600;color:var(--text)}
+.tag{
+  display:inline-block;padding:3px 9px;border-radius:99px;
+  font-family:var(--f-mono);font-size:9.5px;letter-spacing:1.2px;
+  text-transform:uppercase;font-weight:600;
+}
+.tag.iled{background:rgba(255,31,68,0.14);color:#FF5478}
+.tag.grupo{background:rgba(255,204,0,0.12);color:#FFD84D}
+.tag.permuta{background:rgba(191,90,242,0.14);color:var(--sys-purple)}
+
+/* ============ COMPARE CARDS ============ */
+.compare-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.compare-card{padding:24px 22px 28px;text-align:center}
+.compare-month{
+  font-family:var(--f-mono);font-size:11px;color:var(--text-3);
+  letter-spacing:2.5px;margin-bottom:18px;font-weight:600;
+}
+.compare-bars{display:flex;gap:14px;justify-content:center;align-items:flex-end;height:140px;margin-bottom:22px;position:relative}
+.compare-bar{
+  width:42px;border-radius:8px 8px 0 0;
+  position:relative;display:flex;align-items:flex-end;justify-content:center;
+  padding-bottom:6px;color:var(--text);font-family:var(--f-mono);
+  font-size:10px;font-weight:700;
+  backdrop-filter:blur(8px);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.18);
+}
+.compare-bar.y25{
+  background:linear-gradient(180deg, rgba(255,31,68,0.7), rgba(255,31,68,0.45));
+  border:1px solid rgba(255,31,68,0.45);
+  border-bottom:none;
+}
+.compare-bar.y26{
+  background:linear-gradient(180deg, rgba(10,132,255,0.7), rgba(10,132,255,0.45));
+  border:1px solid rgba(10,132,255,0.45);
+  border-bottom:none;
+}
+.compare-bar-label{
+  position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);
+  font-family:var(--f-mono);font-size:9px;color:var(--text-3);letter-spacing:.5px;
+}
+.compare-delta{
+  font-family:var(--f-display);font-weight:700;font-size:28px;
+  margin-top:8px;letter-spacing:-.8px;
+}
+.compare-delta.up{color:var(--sys-green)}
+.compare-delta.down{color:#FF5478}
+.compare-detail{
+  font-family:var(--f-mono);font-size:9.5px;color:var(--text-3);
+  letter-spacing:1.5px;margin-top:4px;text-transform:uppercase;
+}
+
+/* ============ BOTTOM CONTROLS ============ */
+.bottom-controls{
+  position:fixed;bottom:0;left:0;right:0;height:68px;
+  background:rgba(0,0,0,0.55);
+  backdrop-filter:var(--glass-blur-strong);
+  -webkit-backdrop-filter:var(--glass-blur-strong);
+  border-top:1px solid var(--glass-border);
+  display:flex;align-items:center;justify-content:center;gap:20px;
+  z-index:100;
+}
+.bottom-controls button{
+  background:var(--glass);
+  backdrop-filter:var(--glass-blur);
+  -webkit-backdrop-filter:var(--glass-blur);
+  border:1px solid var(--glass-border);
+  color:var(--text);padding:10px 24px;border-radius:12px;
+  cursor:pointer;font-family:var(--f-mono);font-size:10.5px;
+  letter-spacing:1.8px;text-transform:uppercase;font-weight:600;
+  transition:all .25s cubic-bezier(.2,.7,.3,1);
+  box-shadow:inset 0 1px 0 var(--glass-shine);
+}
+.bottom-controls button:hover:not(:disabled){
+  background:var(--glass-hover);
+  border-color:var(--glass-border-strong);
+  transform:translateY(-1px);
+}
+.bottom-controls button:disabled{opacity:.3;cursor:not-allowed}
+.slide-counter{
+  font-family:var(--f-mono);font-size:13px;color:var(--text-3);
+  letter-spacing:2.2px;min-width:80px;text-align:center;font-weight:500;
+}
+.slide-counter .current{color:var(--text);font-weight:700}
+
+/* ============ LOADER / ERROR ============ */
+.full-overlay{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,0.75);
+  backdrop-filter:var(--glass-blur-strong);
+  -webkit-backdrop-filter:var(--glass-blur-strong);
+  z-index:1000;display:grid;place-items:center;
+}
+.loader-content{text-align:center}
+.loader-spinner{
+  width:54px;height:54px;border:2px solid var(--glass-border-strong);
+  border-top-color:var(--brand);border-radius:50%;
+  animation:spin 1s linear infinite;margin:0 auto 24px;
+  box-shadow:0 0 24px var(--brand-glow);
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loader-text{
+  font-family:var(--f-mono);font-size:11px;color:var(--text-2);
+  letter-spacing:2.5px;text-transform:uppercase;font-weight:500;
+}
+.error-box{
+  max-width:540px;
+  background:rgba(20,20,24,0.85);
+  backdrop-filter:var(--glass-blur-strong);
+  -webkit-backdrop-filter:var(--glass-blur-strong);
+  border:1px solid rgba(255,31,68,0.35);
+  border-radius:22px;padding:36px;text-align:center;
+  box-shadow:0 24px 64px rgba(0,0,0,0.5), inset 0 1px 0 var(--glass-shine);
+}
+.error-box h3{font-family:var(--f-display);font-size:22px;margin-bottom:12px;color:#FF5478}
+.error-box p{color:var(--text-2);font-size:13px;line-height:1.65;margin-bottom:16px}
+.error-box .file-input{
+  background:var(--glass);border:1px dashed var(--glass-border-strong);
+  padding:16px;border-radius:12px;margin-top:14px;
+}
+
+/* ============ FORECAST ============ */
+.forecast-grid{display:grid;grid-template-columns:1.5fr 1fr;gap:20px}
+.scenario-list{display:flex;flex-direction:column;gap:12px}
+.scenario{padding:20px 22px}
+.scenario.base{
+  background:linear-gradient(135deg, rgba(10,132,255,0.10), var(--glass) 70%);
+  border-color:rgba(10,132,255,0.30);
+}
+.scenario-name{
+  font-family:var(--f-mono);font-size:10px;letter-spacing:2.2px;
+  text-transform:uppercase;margin-bottom:12px;color:var(--text-3);font-weight:600;
+}
+.scenario.base .scenario-name{color:#5AB0FF}
+.scenario-row{
+  display:flex;justify-content:space-between;align-items:baseline;
+  padding:7px 0;font-size:13px;
+}
+.scenario-row .label{color:var(--text-3);font-family:var(--f-mono);font-size:10.5px;letter-spacing:1.2px}
+.scenario-row .val{font-family:var(--f-display);font-weight:700;font-size:18px;color:var(--text);letter-spacing:-.3px}
+.scenario.base .scenario-row .val{color:#5AB0FF}
+.method-box{
+  background:var(--glass);border:1px solid var(--glass-border);border-radius:14px;
+  padding:18px 20px;margin-top:18px;font-size:12px;color:var(--text-2);line-height:1.65;
+  backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
+}
+.method-box strong{color:var(--text);font-weight:600}
+
+/* ============ GEO / BAR LISTS ============ */
+.geo-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.bar-list{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.bar-row{display:flex;align-items:center;gap:12px;font-family:var(--f-body)}
+.bar-row .bar-label{width:140px;font-size:12.5px;color:var(--text);font-weight:500}
+.bar-row .bar-track{
+  flex:1;height:26px;background:rgba(255,255,255,0.03);
+  border-radius:8px;overflow:hidden;position:relative;
+  border:1px solid var(--glass-border);
+}
+.bar-row .bar-fill{
+  height:100%;
+  background:linear-gradient(90deg, var(--brand), #FF6B85);
+  border-radius:7px;display:flex;align-items:center;padding:0 10px;
+  font-family:var(--f-mono);font-size:10px;font-weight:700;color:#fff;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.18);
+  transition:width .8s cubic-bezier(.2,.7,.3,1);
+}
+.bar-row .bar-fill.blue{background:linear-gradient(90deg, var(--rgb-blue), #5AB0FF)}
+.bar-row .bar-fill.amber{background:linear-gradient(90deg, var(--rgb-yellow), #FFD84D);color:#1a1a1a}
+.bar-row .bar-value{width:60px;text-align:right;font-family:var(--f-mono);font-size:11.5px;font-weight:600;color:var(--text-2)}
+
+@media(max-width:1300px){
+  .slide{padding:40px 30px 40px 170px}
+  .kpi-grid.cols-4{grid-template-columns:repeat(2,1fr)}
+  .compare-grid{grid-template-columns:repeat(2,1fr)}
+  .hero{grid-template-columns:1fr}
+  .chart-grid.cols-2{grid-template-columns:1fr}
+  .forecast-grid{grid-template-columns:1fr}
+  .geo-grid{grid-template-columns:1fr}
+}
+@media(max-width:900px){
+  .slide{padding:32px 20px 40px 20px}
+  .slide-nav{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div class="full-overlay" id="loader">
+  <div class="loader-content">
+    <div class="loader-spinner"></div>
+    <div class="loader-text">Carregando dados da operação…</div>
+  </div>
+</div>
+
+<!-- ERROR -->
+<div class="full-overlay" id="errorOverlay" hidden>
+  <div class="error-box">
+    <h3>Não foi possível carregar o CSV</h3>
+    <p id="errorMsg">Verifique se a planilha está publicada e acessível, ou faça o upload manual do arquivo CSV.</p>
+    <div class="file-input">
+      <input type="file" id="fileFallback" accept=".csv" style="font-family:var(--f-mono);font-size:11px;color:var(--text-3)" />
+    </div>
+  </div>
+</div>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="brand">
+    <img class="logo-iled-img" src="data:image/png;base64,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" alt="ILED Produções" />
+    <div class="brand-divider"></div>
+    <div class="brand-text">
+      <h1>PAINEL OPERACIONAL</h1>
+      <span class="subtitle">COORDENAÇÃO · ILED PRODUÇÕES</span>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="status loading" id="status">CARREGANDO</div>
+    <input type="file" id="fileInput" accept=".csv" hidden />
+    <button class="btn-upload" id="btnUpload" title="Carregar CSV manualmente">⬆</button>
+    <button class="btn-reload" id="btnReload" title="Recarregar do Google Sheets">↻</button>
+  </div>
+</header>
+
+<!-- SIDE NAV -->
+<nav class="slide-nav" id="sideNav">
+  <button data-idx="0" class="active">01 · CAPA</button>
+  <button data-idx="1">02 · SAZONALIDADE</button>
+  <button data-idx="2">03 · ESTRESSE</button>
+  <button data-idx="3">04 · 25 vs 26</button>
+  <button data-idx="4">05 · GEOGRAFIA</button>
+  <button data-idx="5">06 · SUBLOCAÇÃO</button>
+  <button data-idx="6">07 · GRANDES</button>
+  <button data-idx="7">08 · PROGNÓSTICO</button>
+</nav>
+
+<main class="slides-wrap">
+
+<!-- SLIDE 1: CAPA -->
+<section class="slide active" data-idx="0">
+  <div class="slide-header">
+    <div class="slide-num">SLIDE 01<span class="total"> / 08</span></div>
+    <h2 class="slide-title">Painel <em>Operacional</em></h2>
+    <div class="slide-meta" id="meta1">CARREGANDO</div>
+  </div>
+  <div class="hero">
+    <div class="hero-main">
+      <div class="hero-eyebrow">ANO BASE · <span id="heroYear">2025</span></div>
+      <div class="hero-headline">A operação ILED em <em>números</em>.</div>
+      <div class="hero-number"><span id="totalM2">0</span><span class="unit">m²</span></div>
+      <div class="hero-desc">Metragem total operada — frota própria, parceiros e sublocação. Este é o tamanho do que a coordenação entrega no chão ao longo do ano.</div>
+    </div>
+    <div class="hero-side">
+      <div class="kpi accent-blue">
+        <div class="kpi-label">Eventos no ano</div>
+        <div class="kpi-value" id="totalEvents">0</div>
+        <div class="kpi-sub" id="evMonth">média / mês</div>
+      </div>
+      <div class="kpi accent-yellow">
+        <div class="kpi-label">Cidades atendidas</div>
+        <div class="kpi-value" id="totalCities">0</div>
+        <div class="kpi-sub" id="topCity">cidade-âncora</div>
+      </div>
+      <div class="kpi accent-red">
+        <div class="kpi-label">Razão pico / vale (m²)</div>
+        <div class="kpi-value" id="peakRatio">0<span class="unit">x</span></div>
+        <div class="kpi-sub">desafio de dimensionamento</div>
+      </div>
+    </div>
+  </div>
+  <div class="kpi-grid cols-4" style="margin-top:20px">
+    <div class="kpi">
+      <div class="kpi-label">Sublocação Total</div>
+      <div class="kpi-value" id="totalSub">0<span class="unit">m²</span></div>
+      <div class="kpi-sub" id="subPct">% sobre metragem total</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Ticket Médio</div>
+      <div class="kpi-value" id="avgTicket">0<span class="unit">m²</span></div>
+      <div class="kpi-sub">metragem média por evento</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Mês de Pico</div>
+      <div class="kpi-value" id="peakMonth" style="font-size:30px">—</div>
+      <div class="kpi-sub" id="peakMonthValue">—</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Mês de Vale</div>
+      <div class="kpi-value" id="valeMonth" style="font-size:30px">—</div>
+      <div class="kpi-sub" id="valeMonthValue">—</div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 2: SAZONALIDADE -->
+<section class="slide" data-idx="1">
+  <div class="slide-header">
+    <div class="slide-num">SLIDE 02<span class="total"> / 08</span></div>
+    <h2 class="slide-title">Sazonalidade <em>Dupla</em></h2>
+    <div class="slide-meta">EVENTOS × METRAGEM · 2025</div>
+  </div>
+  <div class="chart-grid cols-2">
+    <div class="chart-card">
+      <div class="chart-title">Eventos e metragem por mês</div>
+      <div class="chart-sub">Eventos = complexidade de coordenação · m² = carga de painel</div>
+      <div class="chart-canvas-wrap tall"><canvas id="chartSazon"></canvas></div>
+    </div>
+    <div class="insights">
+      <div class="insight">
+        <span class="insight-tag warn">Bottleneck Coordenação</span>
+        <h4>Mês de mais eventos</h4>
+        <div class="big-num amber" id="peakEvMonth">—</div>
+        <p>Muitos contratos paralelos, muitos setups, muitos briefings. Estresse na coordenação e no comercial.</p>
+      </div>
+      <div class="insight">
+        <span class="insight-tag alert">Bottleneck Estoque</span>
+        <h4>Mês de mais metragem</h4>
+        <div class="big-num red" id="peakM2Month">—</div>
+        <p>Eventos grandes, caminhão cheio, equipe técnica em campo. Estresse no estoque e na equipe de obra.</p>
+      </div>
+      <div class="insight">
+        <span class="insight-tag info">Insight</span>
+        <h4>Picos diferentes, respostas diferentes</h4>
+        <p>O pico de <strong>eventos</strong> e o pico de <strong>metragem</strong> caem em meses distintos. São naturezas opostas — não dá pra dimensionar a equipe pra "o pico" sem entender qual pico.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 3: HEATMAP -->
+<section class="slide" data-idx="2">
+  <div class="slide-header">
+    <div class="slide-num">SLIDE 03<span class="total"> / 08</span></div>
+    <h2 class="slide-title">Mapa de <em>Estresse Operacional</em></h2>
+    <div class="slide-meta">4 INDICADORES × 12 MESES · 2025</div>
+  </div>
+  <div class="heatmap">
+    <div class="heatmap-grid" id="heatmapGrid"></div>
+    <div class="heatmap-legend">
+      <span>BAIXO</span>
+      <div class="legend-gradient"></div>
+      <span>ALTO</span>
+      <span style="margin-left:auto">VALORES NORMALIZADOS (MIN-MAX) POR LINHA</span>
+    </div>
+  </div>
+  <div class="insights cols-3" style="margin-top:20px">
+    <div class="insight">
+      <span class="insight-tag alert">Composto</span>
+      <h4>Mês mais estressante</h4>
+      <div class="big-num red" id="topStressMonth">—</div>
+      <p>Soma dos 4 indicadores normalizados. O mês onde tudo aperta ao mesmo tempo: muitos eventos, muito m², muitas cidades, muita sublocação.</p>
+    </div>
+    <div class="insight">
+      <span class="insight-tag good">Composto</span>
+      <h4>Mês mais tranquilo</h4>
+      <div class="big-num" style="color:var(--green)" id="lowStressMonth">—</div>
+      <p>Período natural para manutenção preventiva, treinamento de equipe, férias e organização de estoque.</p>
+    </div>
+    <div class="insight">
+      <span class="insight-tag info">Como ler</span>
+      <h4>Stress Index</h4>
+      <p>Cada linha do heatmap é normalizada de 0 a 100. A cor mostra a posição relativa do mês dentro daquele indicador. Use para planejar capacidade mês a mês.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 4: 2025 vs 2026 -->
+<section class="slide" data-idx="3">
+  <div class="slide-header">
+    <div class="slide-num">SLIDE 04<span class="total"> / 08</span></div>
+    <h2 class="slide-title">2025 <em>vs</em> 2026</h2>
+    <div class="slide-meta" id="yoyWindow">MESMA JANELA · JAN — ABR</div>
+  </div>
+  <div class="kpi-grid cols-4" style="margin-bottom:20px">
+    <div class="kpi accent-blue">
+      <div class="kpi-label">Eventos · Jan–Abr</div>
+      <div class="kpi-value"><span id="ev25">0</span> <span style="color:var(--dim);font-size:22px">→</span> <span id="ev26">0</span></div>
+      <div class="kpi-sub"><span id="evDelta">—</span></div>
+    </div>
+    <div class="kpi accent-red">
+      <div class="kpi-label">Metragem · Jan–Abr</div>
+      <div class="kpi-value" style="font-size:38px"><span id="m225">0</span> <span style="color:var(--dim);font-size:22px">→</span> <span id="m226">0</span></div>
+      <div class="kpi-sub"><span id="m2Delta">—</span></div>
+    </div>
+    <div class="kpi accent-yellow">
+      <div class="kpi-label">m² / Evento</div>
+      <div class="kpi-value"><span id="avg25">0</span> <span style="color:var(--dim);font-size:22px">→</span> <span id="avg26">0</span></div>
+      <div class="kpi-sub"><span id="avgDelta">—</span></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Sublocação · Jan–Abr</div>
+      <div class="kpi-value" style="font-size:38px"><span id="sub25">0</span> <span style="color:var(--dim);font-size:22px">→</span> <span id="sub26">0</span></div>
+      <div class="kpi-sub"><span id="subDelta">—</span></div>
+    </div>
+  </div>
+  <div class="compare-grid" id="compareGrid"></div>
+  <div class="insight" style="margin-top:24px">
+    <span class="insight-tag info">Leitura</span>
+    <h4 id="yoyHeadline">A operação 2026 está fazendo eventos maiores, não mais eventos.</h4>
+    <p id="yoyBody">A diferença no número de eventos é pequena, mas a metragem por evento mudou de patamar. Operacionalmente: menos coordenação, mais carga por projeto, mais dependência do desempenho de cada entrega individual.</p>
+  </div>
+</section>
+
+<!-- SLIDE 5: GEOGRAFIA -->
+<section class="slide" data-idx="4">
+  <div class="slide-header">
+    <div class="slide-num">SLIDE 05<span class="total"> / 08</span></div>
+    <h2 class="slide-title">Dispersão <em>Geográfica</em></h2>
+    <div class="slide-meta">LOGÍSTICA · ESTADOS · CIDADES · 2025</div>
+  </div>
+  <div class="kpi-grid cols-4" style="margin-bottom:20px">
+    <div class="kpi accent-yellow">
+      <div class="kpi-label">Cidades únicas / ano</div>
+      <div class="kpi-value" id="totalCitiesGeo">0</div>
+      <div class="kpi-sub">capilaridade da operação</div>
+    </div>
+    <div class="kpi accent-red">
+      <div class="kpi-label">Estados atendidos</div>
+      <div class="kpi-value" id="totalStates">0</div>
+      <div class="kpi-sub">UFs operadas</div>
+    </div>
+    <div class="kpi accent-blue">
+      <div class="kpi-label">Mês mais disperso</div>
+      <div class="kpi-value" id="dispMonth" style="font-size:30px">—</div>
+      <div class="kpi-sub" id="dispMonthVal">cidades simultâneas</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Concentração DF + SP</div>
+      <div class="kpi-value" id="dfSpPct">0<span class="unit">%</span></div>
+      <div class="kpi-sub">do volume de eventos</div>
+    </div>
+  </div>
+  <div class="geo-grid">
+    <div class="chart-card">
+      <div class="chart-title">Eventos por UF</div>
+      <div class="chart-sub">Onde a operação se espalha</div>
+      <div class="bar-list" id="ufList"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Top 12 cidades por metragem</div>
+      <div class="chart-sub">Os pólos da operação</div>
+      <div class="bar-list" id="cityList"></div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 6: SUBLOCAÇÃO -->
+<section class="slide" data-idx="5">
+  <div class="slide-header">
+    <div class="slide-num">SLIDE 06<span class="total"> / 08</span></div>
+    <h2 class="slide-title">Sublocação <em>Dissecada</em></h2>
+    <div class="slide-meta">LOGÍSTICA vs SATURAÇÃO · 2025</div>
+  </div>
+  <div class="kpi-grid cols-3" style="margin-bottom:20px">
+    <div class="kpi accent-red">
+      <div class="kpi-label">Sublocação Total</div>
+      <div class="kpi-value" id="subTotal">0<span class="unit">m²</span></div>
+      <div class="kpi-sub" id="subTotalPct">% do total operado</div>
+    </div>
+    <div class="kpi accent-yellow">
+      <div class="kpi-label">Sublocação Logística</div>
+      <div class="kpi-value" id="subLog">0<span class="unit">m²</span></div>
+      <div class="kpi-sub" id="subLogPct">eventos fora DF/SP</div>
+    </div>
+    <div class="kpi accent-blue">
+      <div class="kpi-label">Sublocação Saturação</div>
+      <div class="kpi-value" id="subSat">0<span class="unit">m²</span></div>
+      <div class="kpi-sub" id="subSatPct">eventos em DF/SP</div>
+    </div>
+  </div>
+  <div class="chart-grid cols-2">
+    <div class="chart-card">
+      <div class="chart-title">Sublocação mês a mês</div>
+      <div class="chart-sub">Quando a capacidade da frota foi excedida</div>
+      <div class="chart-canvas-wrap tall"><canvas id="chartSub"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Top eventos com sublocação</div>
+      <div class="chart-sub">Onde mais foi necessário painel de terceiros</div>
+      <div style="overflow-y:auto;max-height:420px">
+        <table class="data-table" id="subEventsTable">
+          <thead><tr><th>EVENTO</th><th>MÊS</th><th style="text-align:right">M²</th><th style="text-align:right">SUB</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="insight" style="margin-top:20px">
+    <span class="insight-tag info">Como ler</span>
+    <h4>Sublocação logística ≠ falha de capacidade</h4>
+    <p>Sublocar painel em eventos <strong>fora de DF/SP</strong> é decisão inteligente — não compensa mandar caminhão pra Porto Alegre, Brusque, Belém. O número que importa pra decisão de comprar mais painel é a <strong>sublocação por saturação</strong> (eventos em DF/SP com sublocação). É ali que a frota não dá conta.</p>
+  </div>
+</section>
+
+<!-- SLIDE 7: EVENTOS GRANDES -->
+<section class="slide" data-idx="6">
+  <div class="slide-header">
+    <div class="slide-num">SLIDE 07<span class="total"> / 08</span></div>
+    <h2 class="slide-title">Eventos <em>Grandes</em> Simultâneos</h2>
+    <div class="slide-meta">≥ 200 m² POR MÊS · 2025</div>
+  </div>
+  <div class="kpi-grid cols-4" style="margin-bottom:20px">
+    <div class="kpi accent-red">
+      <div class="kpi-label">Eventos ≥ 200m² no ano</div>
+      <div class="kpi-value" id="bigTotal">0</div>
+      <div class="kpi-sub" id="bigPct">% sobre o total de eventos</div>
+    </div>
+    <div class="kpi accent-yellow">
+      <div class="kpi-label">Pico simultâneo</div>
+      <div class="kpi-value" id="bigPeakVal">0</div>
+      <div class="kpi-sub" id="bigPeakMonth">eventos grandes no mesmo mês</div>
+    </div>
+    <div class="kpi accent-blue">
+      <div class="kpi-label">Maior evento</div>
+      <div class="kpi-value" id="biggestM2" style="font-size:30px">0<span class="unit">m²</span></div>
+      <div class="kpi-sub" id="biggestName">—</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Meses críticos</div>
+      <div class="kpi-value" id="critMonths">0</div>
+      <div class="kpi-sub">meses com 10+ eventos grandes</div>
+    </div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Eventos ≥ 200 m² por mês</div>
+    <div class="chart-sub">Estoque, frota e equipe técnica em paralelo</div>
+    <div class="chart-canvas-wrap"><canvas id="chartBig"></canvas></div>
+  </div>
+  <div class="insight" style="margin-top:20px">
+    <span class="insight-tag warn">Atenção</span>
+    <h4>3 eventos grandes por semana = teste de capacidade</h4>
+    <p>Meses com 12+ eventos ≥ 200 m² implicam <strong>3 projetos grandes rodando em paralelo toda semana</strong>. Esse é o ponto onde o estoque, a equipe técnica, o transporte e os gerentes de evento são todos testados ao mesmo tempo. É também o melhor preditor de quando o estoque vai estourar e quando a manutenção preventiva precisa ser antecipada.</p>
+  </div>
+</section>
+
+<!-- SLIDE 8: PROGNÓSTICO -->
+<section class="slide" data-idx="7">
+  <div class="slide-header">
+    <div class="slide-num">SLIDE 08<span class="total"> / 08</span></div>
+    <h2 class="slide-title">Prognóstico <em id="forecastMonthTitle">Maio 2026</em></h2>
+    <div class="slide-meta">PROJEÇÃO · MÊS SUBSEQUENTE</div>
+  </div>
+  <div class="forecast-grid">
+    <div class="chart-card">
+      <div class="chart-title">Histórico + projeção</div>
+      <div class="chart-sub">Cinza = 2025 real · Ciano = 2026 real · Vermelho tracejado = projeção</div>
+      <div class="chart-canvas-wrap tall"><canvas id="chartForecast"></canvas></div>
+    </div>
+    <div>
+      <div class="scenario-list">
+        <div class="scenario">
+          <div class="scenario-name">CENÁRIO CONSERVADOR</div>
+          <div class="scenario-row"><span class="label">Eventos</span><span class="val" id="scLowEv">—</span></div>
+          <div class="scenario-row"><span class="label">Metragem</span><span class="val" id="scLowM2">—</span></div>
+          <div class="scenario-row"><span class="label">Cidades</span><span class="val" id="scLowCity">—</span></div>
+          <div class="scenario-row"><span class="label">Sublocação esperada</span><span class="val" id="scLowSub">—</span></div>
+        </div>
+        <div class="scenario base">
+          <div class="scenario-name">CENÁRIO BASE</div>
+          <div class="scenario-row"><span class="label">Eventos</span><span class="val" id="scBaseEv">—</span></div>
+          <div class="scenario-row"><span class="label">Metragem</span><span class="val" id="scBaseM2">—</span></div>
+          <div class="scenario-row"><span class="label">Cidades</span><span class="val" id="scBaseCity">—</span></div>
+          <div class="scenario-row"><span class="label">Sublocação esperada</span><span class="val" id="scBaseSub">—</span></div>
+        </div>
+        <div class="scenario">
+          <div class="scenario-name">CENÁRIO AGRESSIVO</div>
+          <div class="scenario-row"><span class="label">Eventos</span><span class="val" id="scHighEv">—</span></div>
+          <div class="scenario-row"><span class="label">Metragem</span><span class="val" id="scHighM2">—</span></div>
+          <div class="scenario-row"><span class="label">Cidades</span><span class="val" id="scHighCity">—</span></div>
+          <div class="scenario-row"><span class="label">Sublocação esperada</span><span class="val" id="scHighSub">—</span></div>
+        </div>
+      </div>
+      <div class="method-box">
+        <strong>Método:</strong> baseline = mesmo mês de 2025. Aplicamos sobre ele a variação observada entre Jan-Abr 2026 vs Jan-Abr 2025. <strong>Conservador</strong> = variação do mês mais recente (Abril). <strong>Base</strong> = média ponderada dos 4 meses. <strong>Agressivo</strong> = melhor variação dos últimos 4 meses. Quanto mais dados de 2026, mais precisa a projeção.
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- BOTTOM CONTROLS -->
+<footer class="bottom-controls">
+  <button id="btnPrev">← ANTERIOR</button>
+  <div class="slide-counter"><span class="current" id="curSlide">1</span> / 8</div>
+  <button id="btnNext">PRÓXIMO →</button>
+</footer>
+
+<script>
+/* ============================================================
+   ILED · PAINEL OPERACIONAL · JavaScript
+   ============================================================ */
+
+const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQn7f-gDP5ZGPl8D1951893jOzHBbKESVtvcMyZ9zgTalWWMbU7zJn4bnyzI_oArM8NuDY8XG6CPUXl/pub?output=csv";
+
+const MONTHS = ["JANEIRO","FEVEREIRO","MARÇO","ABRIL","MAIO","JUNHO","JULHO","AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO"];
+const MONTHS_SHORT = ["JAN","FEV","MAR","ABR","MAI","JUN","JUL","AGO","SET","OUT","NOV","DEZ"];
+const STATES_HOME = new Set(["DF","SP"]);
+const COLORS = {
+  brand:"#FF1F44",       // vermelho ILED
+  brandSoft:"#FF5478",
+  red:"#FF1F44",         // alias pra compat com código existente
+  red2:"#FF5478",
+  yellow:"#FFCC00",
+  yellow2:"#FFD84D",
+  blue:"#0A84FF",
+  blue2:"#5AB0FF",
+  cyan:"#0A84FF",        // alias pra compat — agora aponta pro azul da marca
+  cyan2:"#5AB0FF",
+  amber:"#FFCC00",       // alias
+  green:"#30D158",
+  purple:"#BF5AF2",
+  pink:"#FF375F",
+  mute:"rgba(255,255,255,0.40)",
+  text:"#ffffff",
+  text2:"rgba(255,255,255,0.65)",
+  border:"rgba(255,255,255,0.08)",
+  borderStrong:"rgba(255,255,255,0.14)",
+  glass:"rgba(255,255,255,0.04)"
+};
+
+const UF_VALIDAS = new Set(["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"]);
+const CITY_UF = {
+  "SÃO PAULO":"SP","SAO PAULO":"SP","BRASÍLIA":"DF","BRASILIA":"DF","MATINHOS":"PR",
+  "VITÓRIA DA CONQUISTA":"BA","ENGENHEIRO COELHO":"SP","PALMAS":"TO","BELÉM":"PA","BELEM":"PA",
+  "PRAIA GRANDE":"SP","UBATUBA":"SP","GOIÂNIA":"GO","GOIANIA":"GO","RIO DE JANEIRO":"RJ",
+  "BELO HORIZONTE":"MG","PORTO ALEGRE":"RS","SALVADOR":"BA","CURITIBA":"PR",
+  "BALNEÁRIO CAMBORIÚ":"SC","BRUSQUE":"SC","ILHÉUS":"BA","BOA VISTA":"RR","ANÁPOLIS":"GO","ANAPOLIS":"GO",
+  "LUZIÂNIA":"GO","ALTO PARAÍSO":"GO","RIBEIRÃO PRETO":"SP","CAMPINAS":"SP","FRANCA":"SP",
+  "ATIBAIA":"SP","UBERLÂNDIA":"MG","UBERABA":"MG","NOVA LIMA":"MG","PATROCÍNIO":"MG",
+  "PARACATU":"MG","PEDRO LEOPOLDO":"MG","UNAÍ":"MG","SANTA BÁRBARA":"MG","VALPARAÍSO":"GO",
+  "CALDAS NOVAS":"GO","INDIARA":"GO","SÃO JOSÉ DO RIO PRETO":"SP","APARECIDA DO NORTE":"SP",
+  "CAÇAPAVA":"SP","CAJAMAR":"SP","PORTO FELIZ":"SP","SÃO DESIDÉRIO":"BA"
+};
+
+const norm = s => String(s||"").trim().toUpperCase().replace(/\s+/g," ");
+const fmt = n => Math.round(n).toLocaleString("pt-BR");
+const fmt1 = n => n.toLocaleString("pt-BR",{minimumFractionDigits:1,maximumFractionDigits:1});
+
+function extractUF(cidade){
+  if(!cidade) return "ND";
+  const m = cidade.match(/-\s*([A-Z]{2})\s*$/);
+  if(m && UF_VALIDAS.has(m[1])) return m[1];
+  for(const [c,u] of Object.entries(CITY_UF)){ if(cidade.includes(c)) return u; }
+  return "ND";
+}
+function extractCityName(cidade){
+  if(!cidade) return "ND";
+  return cidade.replace(/\s*-\s*[A-Z]{2}\s*$/,"").trim() || cidade;
+}
+
+/* normaliza chave de coluna (tira acento, espaços, lower) */
+function keyOf(s){
+  return String(s||"").trim().toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .replace(/\s+/g," ");
+}
+const COL_ALIAS = {
+  "nome do evento":"evento","evento":"evento","nome":"evento",
+  "mes":"mes","mês":"mes",
+  "metragem":"m2","m2":"m2","m²":"m2","metros":"m2",
+  "tipo de painel":"tipo","tipo":"tipo","painel":"tipo",
+  "tipo de operacao":"op","tipo de operação":"op",
+  "comercial":"com","vendedor":"com",
+  "painel sub":"sub","sublocacao":"sub","sublocação":"sub","sub":"sub",
+  "cidade":"cidade","local":"cidade",
+  "ano":"ano","year":"ano"
+};
+
+// dicionário de variações aceitas pra MÊS
+const MONTH_LOOKUP = (()=>{
+  const map = {};
+  MONTHS.forEach((m,i)=>{
+    map[m] = m;                               // JANEIRO
+    map[m.slice(0,3)] = m;                    // JAN
+    map[m.slice(0,4)] = m;                    // JANE
+    map[String(i+1)] = m;                     // 1
+    map[String(i+1).padStart(2,"0")] = m;     // 01
+  });
+  // variações sem acento / comuns
+  map["MARCO"] = "MARÇO";
+  map["MAR"]   = "MARÇO";
+  map["FEV"]   = "FEVEREIRO";
+  map["ABR"]   = "ABRIL";
+  map["MAI"]   = "MAIO";
+  map["JUN"]   = "JUNHO";
+  map["JUL"]   = "JULHO";
+  map["AGO"]   = "AGOSTO";
+  map["SET"]   = "SETEMBRO";
+  map["OUT"]   = "OUTUBRO";
+  map["NOV"]   = "NOVEMBRO";
+  map["DEZ"]   = "DEZEMBRO";
+  return map;
+})();
+
+function normalizeMonth(v){
+  if(v===null || v===undefined) return "";
+  // remove acento e espaços
+  const s = String(v).trim().toUpperCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  if(!s) return "";
+  // match direto
+  if(MONTH_LOOKUP[s]) return MONTH_LOOKUP[s];
+  // match parcial: "JANEIRO/2025", "JAN 25", etc.
+  for(const key of Object.keys(MONTH_LOOKUP)){
+    if(key.length>=3 && s.startsWith(key)) return MONTH_LOOKUP[key];
+  }
+  return ""; // não conseguiu identificar
+}
+
+function isNumericLike(v){
+  if(v===null || v===undefined) return false;
+  const s = String(v).trim().replace(",",".");
+  if(!s) return false;
+  return /^-?\d+(\.\d+)?$/.test(s);
+}
+
+function parseRow(raw){
+  const obj = { _issues: [] };
+  for(const k of Object.keys(raw)){
+    const key = COL_ALIAS[keyOf(k)];
+    if(key) obj[key] = raw[k];
+  }
+
+  // ---------- DETECÇÃO DE SWAP: MÊS contém número, METRAGEM contém texto ----------
+  // cenário típico: usuário arrastou célula ou colou trocado
+  if(isNumericLike(obj.mes) && obj.m2 !== undefined){
+    const mesNum = parseFloat(String(obj.mes).replace(",","."));
+    const m2NaoNumerico = !isNumericLike(obj.m2) && String(obj.m2||"").trim() !== "";
+    if(m2NaoNumerico){
+      // troca os campos
+      [obj.mes, obj.m2] = [obj.m2, mesNum];
+      obj._issues.push("SWAP_MES_METRAGEM_CORRIGIDO");
+    } else if(mesNum >= 1 && mesNum <= 12 && Number.isInteger(mesNum)){
+      // MÊS tem número 1-12 → interpreta como mês numérico (jan=1, fev=2, etc.)
+      obj.mes = MONTHS[mesNum-1];
+      obj._issues.push("MES_NUMERICO_INTERPRETADO");
+    } else {
+      // número estranho na coluna mês — flag e descarta o mês
+      obj._issues.push("MES_INVALIDO_NUMERICO");
+      obj.mes = "";
+    }
+  }
+
+  // numeric coercion
+  obj.m2 = parseFloat(String(obj.m2||"0").replace(",",".")) || 0;
+  obj.sub = parseFloat(String(obj.sub||"0").replace(",",".")) || 0;
+  obj.evento = norm(obj.evento);
+
+  // mês: usa o normalizador tolerante
+  const mesOriginal = obj.mes;
+  obj.mes = normalizeMonth(obj.mes);
+  if(!obj.mes && mesOriginal){
+    obj._issues.push("MES_NAO_RECONHECIDO:"+String(mesOriginal).slice(0,20));
+  }
+
+  obj.tipo = norm(obj.tipo) || "ND";
+  obj.com = norm(obj.com);
+  obj.cidade = norm(obj.cidade);
+  obj.cidadeNome = extractCityName(obj.cidade);
+  obj.uf = extractUF(obj.cidade);
+
+  // ano: se existir, usa; senão tenta detectar
+  let ano = parseInt(String(obj.ano||"").replace(/\D/g,""));
+  if(!ano){
+    const m = obj.evento.match(/\b(202[3-9])\b/);
+    if(m) ano = parseInt(m[1]);
+  }
+  obj.ano = ano || null;
+  return obj;
+}
+
+let STATE = { rows: [], years: [], primaryYear: null, secondaryYear: null };
+let CHARTS = {};
+
+/* ============================================================
+   CARGA DE DADOS
+   ============================================================ */
+async function loadFromUrl(){
+  setStatus("loading","CARREGANDO");
+  const cacheBust = "&_=" + Date.now();
+  const direct = CSV_URL + cacheBust;
+
+  // Estratégias em cascata: direto primeiro, depois proxies CORS.
+  // Necessário porque abrir o arquivo por file:// (duplo-clique) faz o
+  // navegador bloquear o fetch direto ao Google (política CORS).
+  const strategies = [
+    { name:"direto", url: direct },
+    { name:"proxy corsproxy.io", url: "https://corsproxy.io/?url=" + encodeURIComponent(direct) },
+    { name:"proxy allorigins", url: "https://api.allorigins.win/raw?url=" + encodeURIComponent(direct) },
+    { name:"proxy thingproxy", url: "https://thingproxy.freeboard.io/fetch/" + direct },
+  ];
+
+  let lastErr = null;
+  for(const strat of strategies){
+    try{
+      setStatus("loading", strat.name === "direto" ? "CARREGANDO" : "TENTANDO VIA PROXY…");
+      const res = await fetch(strat.url, { redirect:"follow" });
+      if(!res.ok) throw new Error("HTTP "+res.status);
+      const text = await res.text();
+      // valida que voltou CSV de verdade (tem vírgula e linhas), não HTML de erro
+      if(!text || text.trim().length < 10 || /<html|<!doctype/i.test(text.slice(0,200))){
+        throw new Error("resposta não parece um CSV válido");
+      }
+      console.info(`[ILED] CSV carregado via: ${strat.name}`);
+      parseAndRender(text);
+      return; // sucesso, encerra
+    }catch(e){
+      console.warn(`[ILED] Estratégia "${strat.name}" falhou:`, e.message);
+      lastErr = e;
+    }
+  }
+
+  // todas falharam
+  console.error("[ILED] Todas as estratégias de carregamento falharam.", lastErr);
+  showFetchError(lastErr);
+}
+
+function showFetchError(err){
+  document.getElementById("loader").hidden = true;
+  setStatus("error","ERRO DE CONEXÃO");
+  const overlay = document.getElementById("errorOverlay");
+  const isFileProtocol = location.protocol === "file:";
+  overlay.innerHTML = `
+    <div class="error-box" style="max-width:560px">
+      <h3>Não consegui buscar o CSV automaticamente</h3>
+      <p>${isFileProtocol
+        ? "Isso acontece porque o arquivo foi aberto direto do computador (<strong style='color:var(--text)'>file://</strong>), e o navegador bloqueia o acesso ao Google Sheets por segurança. Tentei 3 proxies alternativos e nenhum respondeu."
+        : "O navegador não conseguiu acessar a planilha publicada. Tentei vários caminhos alternativos sem sucesso."}
+      </p>
+      <p style="margin-top:14px;font-size:12.5px">Você tem duas opções rápidas:</p>
+      <div style="text-align:left;background:var(--glass);border:1px solid var(--glass-border);border-radius:12px;padding:16px 18px;margin-top:10px;font-size:12.5px;color:var(--text-2);line-height:1.7">
+        <strong style="color:var(--text)">Opção 1 — Upload manual (instantâneo):</strong><br>
+        Baixe o CSV da planilha (Arquivo → Baixar → CSV) e carregue abaixo. Funciona offline.
+        <div style="margin-top:12px"></div>
+        <strong style="color:var(--text)">Opção 2 — Hospedar online:</strong><br>
+        Suba este arquivo em qualquer servidor (Google Sites, Netlify, GitHub Pages) e o carregamento automático funcionará normalmente.
+      </div>
+      <div class="file-input" style="margin-top:16px">
+        <input type="file" id="fileFallback2" accept=".csv" style="font-family:var(--f-mono);font-size:11px;color:var(--text-2)" />
+      </div>
+      <button onclick="loadFromUrl()" style="margin-top:16px;background:var(--glass);border:1px solid var(--glass-border);color:var(--text);padding:10px 22px;border-radius:12px;cursor:pointer;font-family:var(--f-mono);font-size:11px;letter-spacing:1.5px;text-transform:uppercase">↻ TENTAR DE NOVO</button>
+    </div>`;
+  overlay.hidden = false;
+  const fb = document.getElementById("fileFallback2");
+  if(fb) fb.addEventListener("change", e=>{ const f=e.target.files[0]; if(f) loadFromFile(f); });
+}
+
+function loadFromFile(file){
+  setStatus("loading","CARREGANDO ARQUIVO");
+  const reader = new FileReader();
+  reader.onload = e => parseAndRender(e.target.result);
+  reader.onerror = () => showError("Erro lendo arquivo");
+  reader.readAsText(file);
+}
+function parseAndRender(csvText){
+  const res = Papa.parse(csvText,{header:true,skipEmptyLines:true});
+  if(res.errors && res.errors.length){
+    console.warn("CSV warnings",res.errors.slice(0,3));
+  }
+  const parsed = res.data.map(parseRow);
+  const totalCSV = parsed.filter(r=>r.evento || r.mes || r.m2).length; // ignora linhas totalmente vazias
+
+  // ========== FILTRO PRINCIPAL: METRAGEM > 0 ==========
+  // Linha sem metragem não entra em NENHUMA agregação. É descarte silencioso.
+  const noMetragem = parsed.filter(r => (!r.m2 || r.m2 <= 0));
+  const withMetragem = parsed.filter(r => r.m2 > 0);
+
+  // Das que têm metragem, separa por validade do mês
+  const rows = withMetragem.filter(r => r.mes && MONTHS.includes(r.mes));
+  const badMonth = withMetragem.filter(r => !r.mes || !MONTHS.includes(r.mes));
+  const recovered = rows.filter(r => r._issues && r._issues.length > 0);
+
+  // log no console pra debug
+  if(noMetragem.length){
+    console.info(`[ILED] ${noMetragem.length} linha(s) descartada(s) silenciosamente por não ter metragem (>0).`);
+  }
+  if(badMonth.length){
+    console.warn(`[ILED] ⚠ ${badMonth.length} linha(s) COM METRAGEM mas com MÊS inválido — descartadas:`);
+    console.table(badMonth.slice(0,20).map(r=>({
+      evento: r.evento ? r.evento.slice(0,50) : "(vazio)",
+      m2: r.m2,
+      mes_problema: r._issues.join(" | ") || "MES_VAZIO",
+      cidade: r.cidadeNome
+    })));
+  }
+  if(recovered.length){
+    console.info(`[ILED] ${recovered.length} linha(s) recuperada(s) automaticamente:`);
+    console.table(recovered.slice(0,20).map(r=>({
+      evento: r.evento.slice(0,50),
+      mes_corrigido: r.mes,
+      m2: r.m2,
+      correcao: r._issues.join(" | ")
+    })));
+  }
+
+  if(!rows.length){
+    showError(`Nenhuma linha com metragem válida foi encontrada (${totalCSV} linhas no CSV). Verifique se a coluna METRAGEM tem valores numéricos maiores que zero. Abra o console (F12) para ver detalhes.`);
+    return;
+  }
+
+  // guarda diagnóstico pra UI
+  STATE._diagnostic = {
+    total: totalCSV,
+    valid: rows.length,
+    recovered: recovered.length,
+    noMetragem: noMetragem.length,
+    badMonth: badMonth.length,
+    badMonthRows: badMonth
+  };
+
+  // detectar anos
+  let years = [...new Set(rows.map(r=>r.ano).filter(Boolean))].sort();
+  if(!years.length){
+    const yy = new Date().getFullYear();
+    rows.forEach(r=>r.ano=yy);
+    years = [yy];
+  }
+
+  STATE.rows = rows;
+  STATE.years = years;
+  STATE.primaryYear = years[years.length-1]; // mais recente (parcial)
+  STATE.secondaryYear = years.length > 1 ? years[years.length-2] : years[0];
+
+  // se só temos 1 ano e ele tem todos os 12 meses → ele é o "base"; senão o anterior é base
+  const monthsInPrimary = new Set(rows.filter(r=>r.ano===STATE.primaryYear).map(r=>r.mes));
+  if(monthsInPrimary.size === 12){
+    STATE.secondaryYear = STATE.primaryYear;
+    STATE.primaryYear = STATE.primaryYear; // tudo igual
+  }
+
+  document.getElementById("loader").hidden = true;
+  document.getElementById("errorOverlay").hidden = true;
+
+  // status amarelo se houver linhas COM metragem mas SEM mês válido (essas valem alerta)
+  // descartes silenciosos (sem metragem) ficam só no console
+  const diag = STATE._diagnostic;
+  let statusType = "ok";
+  let statusText = `${rows.length} REGISTROS · ${new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}`;
+  if(diag.badMonth > 0){
+    statusType = "loading"; // amarelo
+    statusText = `⚠ ${rows.length} OK · ${diag.badMonth} C/ MÊS INVÁLIDO · CLIQUE`;
+  } else if(diag.recovered > 0){
+    statusText = `${rows.length} REGISTROS (${diag.recovered} AUTO-CORRIGIDAS)`;
+  }
+  setStatus(statusType, statusText);
+
+  // se houver problemas de mês, status fica clicável
+  const statusEl = document.getElementById("status");
+  statusEl.style.cursor = diag.badMonth>0 ? "pointer" : "default";
+  statusEl.onclick = diag.badMonth>0 ? showDataIssuesModal : null;
+
+  renderAll();
+}
+function setStatus(type,text){
+  const el = document.getElementById("status");
+  el.className = "status " + (type==="ok"?"":type);
+  el.textContent = text;
+}
+function showError(msg){
+  document.getElementById("loader").hidden = true;
+  document.getElementById("errorOverlay").hidden = false;
+  document.getElementById("errorMsg").textContent = msg;
+  setStatus("error","ERRO");
+}
+
+function showDataIssuesModal(){
+  const diag = STATE._diagnostic;
+  if(!diag || !diag.badMonthRows.length) return;
+
+  let html = `<div class="error-box" style="max-width:720px;text-align:left;border-color:var(--amber)">
+    <h3 style="color:var(--amber)">⚠ ${diag.badMonth} linha(s) com metragem mas SEM mês válido</h3>
+    <p>Essas linhas têm metragem (m²) preenchida mas o valor da coluna <strong style="color:var(--text)">MÊS</strong> não pôde ser identificado — então não entram nas agregações mensais. Corrija na planilha e clique em ↻.</p>
+    <div style="max-height:380px;overflow-y:auto;background:var(--glass);border:1px solid var(--glass-border);border-radius:12px;margin-top:14px">
+      <table class="data-table" style="font-size:12px">
+        <thead><tr><th>EVENTO</th><th>VALOR EM "MÊS"</th><th style="text-align:right">M²</th><th>PROBLEMA</th></tr></thead>
+        <tbody>`;
+  diag.badMonthRows.slice(0,50).forEach(r=>{
+    const problem = (r._issues && r._issues.length) ? r._issues.join(", ") : "MÊS vazio";
+    const mesShown = r._issues && r._issues.find(i=>i.startsWith("MES_NAO_RECONHECIDO:"));
+    const mesValue = mesShown ? mesShown.replace("MES_NAO_RECONHECIDO:","") : (r.mes || "(vazio)");
+    html += `<tr>
+      <td>${(r.evento||"(vazio)").slice(0,40)}</td>
+      <td><span class="tag" style="background:rgba(245,184,0,.15);color:var(--amber)">${mesValue}</span></td>
+      <td class="num">${fmt(r.m2)}</td>
+      <td style="font-family:var(--f-mono);font-size:10px;color:var(--text-3)">${problem}</td>
+    </tr>`;
+  });
+  html += `</tbody></table></div>`;
+  if(diag.noMetragem > 0){
+    html += `<p style="margin-top:14px;color:var(--text-3);font-size:12px">ℹ Além disso, ${diag.noMetragem} linha(s) foram descartadas silenciosamente por não terem metragem preenchida (comportamento esperado).</p>`;
+  }
+  if(diag.recovered > 0){
+    html += `<p style="margin-top:8px;color:var(--green);font-size:12px">✓ ${diag.recovered} linha(s) foram auto-corrigidas com sucesso (ver console F12).</p>`;
+  }
+  html += `<button onclick="document.getElementById('errorOverlay').hidden=true" style="margin-top:18px;background:var(--glass);border:1px solid var(--border);color:var(--text);padding:10px 22px;border-radius:8px;cursor:pointer;font-family:var(--f-mono);font-size:11px;letter-spacing:1.5px;text-transform:uppercase">FECHAR</button>
+  </div>`;
+  const overlay = document.getElementById("errorOverlay");
+  overlay.innerHTML = html;
+  overlay.hidden = false;
+}
+
+/* ============================================================
+   AGREGAÇÕES
+   ============================================================ */
+function aggByMonth(year){
+  const rs = STATE.rows.filter(r=>r.ano===year);
+  const out = {};
+  for(const m of MONTHS){
+    const arr = rs.filter(r=>r.mes===m);
+    out[m] = {
+      eventos: arr.length,
+      m2: arr.reduce((s,r)=>s+r.m2,0),
+      sub: arr.reduce((s,r)=>s+r.sub,0),
+      cidades: new Set(arr.map(r=>r.cidadeNome)).size,
+      big: arr.filter(r=>r.m2>=200).length
+    };
+  }
+  return out;
+}
+function yearTotals(year){
+  const rs = STATE.rows.filter(r=>r.ano===year);
+  return {
+    eventos: rs.length,
+    m2: rs.reduce((s,r)=>s+r.m2,0),
+    sub: rs.reduce((s,r)=>s+r.sub,0),
+    cidades: new Set(rs.map(r=>r.cidadeNome)).size,
+    ufs: new Set(rs.map(r=>r.uf).filter(u=>u!=="ND")).size,
+    months: [...new Set(rs.map(r=>r.mes))]
+  };
+}
+
+/* ============================================================
+   RENDER MASTER
+   ============================================================ */
+function renderAll(){
+  Object.values(CHARTS).forEach(c=>c && c.destroy && c.destroy());
+  CHARTS = {};
+  renderSlide1();
+  renderSlide2();
+  renderSlide3();
+  renderSlide4();
+  renderSlide5();
+  renderSlide6();
+  renderSlide7();
+  renderSlide8();
+}
+
+
+/* ============================================================
+   SLIDE 1 · CAPA
+   ============================================================ */
+function renderSlide1(){
+  // usa ano mais recente que tem dados completos OU o que tiver mais meses
+  let baseYear = STATE.secondaryYear;
+  if(STATE.years.length === 1) baseYear = STATE.years[0];
+
+  const t = yearTotals(baseYear);
+  const agg = aggByMonth(baseYear);
+  const monthsWithData = MONTHS.filter(m => agg[m].eventos > 0);
+
+  document.getElementById("heroYear").textContent = baseYear;
+  document.getElementById("totalM2").textContent = fmt(t.m2);
+  document.getElementById("totalEvents").textContent = fmt(t.eventos);
+  document.getElementById("evMonth").textContent = `~${fmt(t.eventos/Math.max(monthsWithData.length,1))} eventos/mês`;
+  document.getElementById("totalCities").textContent = t.cidades;
+
+  // top city
+  const cityCount = {};
+  STATE.rows.filter(r=>r.ano===baseYear).forEach(r=>{
+    cityCount[r.cidadeNome] = (cityCount[r.cidadeNome]||0) + 1;
+  });
+  const topCity = Object.entries(cityCount).sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById("topCity").textContent = topCity ? `${topCity[0]} (${topCity[1]} eventos)` : "—";
+
+  // pico vale m²
+  const m2Vals = monthsWithData.map(m=>agg[m].m2);
+  const maxM2 = Math.max(...m2Vals), minM2 = Math.min(...m2Vals.filter(v=>v>0));
+  const ratio = minM2 > 0 ? (maxM2/minM2) : 0;
+  document.getElementById("peakRatio").innerHTML = fmt1(ratio) + '<span class="unit">x</span>';
+
+  // sublocação
+  document.getElementById("totalSub").innerHTML = fmt(t.sub) + '<span class="unit">m²</span>';
+  document.getElementById("subPct").textContent = `${fmt1(t.sub/t.m2*100)}% sobre metragem total`;
+
+  // ticket
+  document.getElementById("avgTicket").innerHTML = fmt(t.m2/t.eventos) + '<span class="unit">m²</span>';
+
+  // pico/vale mês
+  const peakMonth = monthsWithData.reduce((a,b)=>agg[a].m2>agg[b].m2?a:b);
+  const valeMonth = monthsWithData.reduce((a,b)=>agg[a].m2<agg[b].m2?a:b);
+  document.getElementById("peakMonth").textContent = peakMonth.slice(0,3);
+  document.getElementById("peakMonthValue").textContent = `${fmt(agg[peakMonth].m2)} m² · ${agg[peakMonth].eventos} eventos`;
+  document.getElementById("valeMonth").textContent = valeMonth.slice(0,3);
+  document.getElementById("valeMonthValue").textContent = `${fmt(agg[valeMonth].m2)} m² · ${agg[valeMonth].eventos} eventos`;
+
+  document.getElementById("meta1").textContent = `ANO ${baseYear} · ${monthsWithData.length} MESES · ${t.eventos} EVENTOS`;
+}
+
+/* ============================================================
+   SLIDE 2 · SAZONALIDADE
+   ============================================================ */
+function renderSlide2(){
+  let baseYear = STATE.years.length === 1 ? STATE.years[0] : STATE.secondaryYear;
+  const agg = aggByMonth(baseYear);
+  const monthsWithData = MONTHS.filter(m=>agg[m].eventos>0);
+  const labels = monthsWithData.map(m=>m.slice(0,3));
+  const evData = monthsWithData.map(m=>agg[m].eventos);
+  const m2Data = monthsWithData.map(m=>agg[m].m2);
+
+  const ctx = document.getElementById("chartSazon").getContext("2d");
+  CHARTS.sazon = new Chart(ctx, {
+    type:"bar",
+    data:{
+      labels,
+      datasets:[
+        { label:"Eventos", data:evData, backgroundColor:"rgba(255,204,0,0.55)", borderColor:COLORS.yellow, borderWidth:1, yAxisID:"y1", borderRadius:6, order:2 },
+        { label:"Metragem (m²)", data:m2Data, type:"line", borderColor:COLORS.brand, backgroundColor:"rgba(255,31,68,0.10)", borderWidth:2.5, tension:.4, fill:true, pointBackgroundColor:COLORS.brand, pointBorderColor:"#fff", pointBorderWidth:2, pointRadius:5, yAxisID:"y2", order:1 }
+      ]
+    },
+    options:chartBase({ dualY:true, axisLabels:["EVENTOS","METRAGEM M²"] })
+  });
+
+  // insights
+  const peakEv = monthsWithData.reduce((a,b)=>agg[a].eventos>agg[b].eventos?a:b);
+  const peakM2 = monthsWithData.reduce((a,b)=>agg[a].m2>agg[b].m2?a:b);
+  document.getElementById("peakEvMonth").textContent = `${peakEv} (${agg[peakEv].eventos})`;
+  document.getElementById("peakM2Month").textContent = `${peakM2} (${fmt(agg[peakM2].m2)}m²)`;
+}
+
+/* ============================================================
+   SLIDE 3 · HEATMAP DE ESTRESSE
+   ============================================================ */
+function renderSlide3(){
+  let baseYear = STATE.years.length === 1 ? STATE.years[0] : STATE.secondaryYear;
+  const agg = aggByMonth(baseYear);
+  const monthsWithData = MONTHS.filter(m=>agg[m].eventos>0);
+
+  const indicators = [
+    { key:"eventos", label:"EVENTOS" },
+    { key:"m2", label:"METRAGEM (m²)" },
+    { key:"cidades", label:"CIDADES" },
+    { key:"sub", label:"SUBLOCAÇÃO (m²)" }
+  ];
+
+  const grid = document.getElementById("heatmapGrid");
+  grid.innerHTML = "";
+
+  // header row
+  grid.appendChild(divEl("h-header",""));
+  for(const m of monthsWithData) grid.appendChild(divEl("h-header", m.slice(0,3)));
+
+  // data rows + stress index
+  const monthStress = monthsWithData.map(()=>0);
+  for(const ind of indicators){
+    grid.appendChild(divEl("h-label", ind.label));
+    const vals = monthsWithData.map(m=>agg[m][ind.key]);
+    const minV = Math.min(...vals), maxV = Math.max(...vals);
+    vals.forEach((v,i)=>{
+      const t = maxV===minV ? 0 : (v-minV)/(maxV-minV);
+      monthStress[i] += t;
+      const cell = divEl("h-cell", v===0 ? "—" : (ind.key==="m2"||ind.key==="sub" ? fmt(v) : v));
+      cell.style.background = heatColor(t);
+      cell.style.borderColor = heatColor(t,.5);
+      cell.style.color = t>.55 ? "#fff" : (t>.2 ? "#fff" : "#bbb");
+      grid.appendChild(cell);
+    });
+  }
+
+  // top / low stress month
+  let topIdx = 0, lowIdx = 0;
+  monthStress.forEach((v,i)=>{ if(v>monthStress[topIdx]) topIdx=i; if(v<monthStress[lowIdx]) lowIdx=i; });
+  document.getElementById("topStressMonth").textContent = monthsWithData[topIdx];
+  document.getElementById("lowStressMonth").textContent = monthsWithData[lowIdx];
+}
+function divEl(cls,txt){ const d = document.createElement("div"); d.className=cls; d.textContent=txt; return d; }
+function heatColor(t,alpha=1){
+  // 0=glass quase invisível, .5=amarelo RGB stripe, 1=vermelho ILED
+  if(t<.01) return `rgba(255,255,255,0.02)`;
+  if(t<.5){
+    const k = t/.5;
+    const r = Math.round(20 + (255-20)*k);
+    const g = Math.round(20 + (204-20)*k);
+    const b = Math.round(24 + (0-24)*k);
+    return `rgba(${r},${g},${b},${alpha*0.78})`;
+  } else {
+    const k = (t-.5)/.5;
+    const r = Math.round(255 + (255-255)*k);
+    const g = Math.round(204 + (31-204)*k);
+    const b = Math.round(0 + (68-0)*k);
+    return `rgba(${r},${g},${b},${alpha*0.85})`;
+  }
+}
+
+
+/* ============================================================
+   SLIDE 4 · 2025 vs 2026
+   ============================================================ */
+function renderSlide4(){
+  // pega o ano parcial mais recente e o ano anterior
+  if(STATE.years.length < 2){
+    // só um ano disponível — mostra mensagem
+    document.getElementById("compareGrid").innerHTML = '<div class="insight" style="grid-column:1/-1"><span class="insight-tag info">Sem comparação</span><h4>Apenas um ano disponível</h4><p>O CSV contém apenas dados de '+STATE.years[0]+'. Para ver a comparação YoY, é preciso ter dados de mais de um ano na planilha.</p></div>';
+    document.getElementById("yoyHeadline").textContent = "Aguardando dados do ano anterior";
+    document.getElementById("yoyBody").textContent = "Quando houver dados de pelo menos dois anos, esta seção mostrará a comparação ano a ano na mesma janela de meses.";
+    return;
+  }
+
+  const yA = STATE.secondaryYear, yB = STATE.primaryYear;
+  const aggA = aggByMonth(yA), aggB = aggByMonth(yB);
+  // janela = meses presentes no ano mais recente
+  const window = MONTHS.filter(m => aggB[m].eventos > 0);
+
+  document.getElementById("yoyWindow").textContent = `MESMA JANELA · ${window.map(m=>m.slice(0,3)).join(" — ")}`;
+
+  let evA=0,evB=0,m2A=0,m2B=0,subA=0,subB=0;
+  for(const m of window){
+    evA += aggA[m].eventos; evB += aggB[m].eventos;
+    m2A += aggA[m].m2; m2B += aggB[m].m2;
+    subA += aggA[m].sub; subB += aggB[m].sub;
+  }
+  const avgA = evA>0 ? m2A/evA : 0;
+  const avgB = evB>0 ? m2B/evB : 0;
+
+  document.getElementById("ev25").textContent = evA;
+  document.getElementById("ev26").textContent = evB;
+  document.getElementById("ev26").style.color = COLORS.cyan;
+  document.getElementById("evDelta").innerHTML = deltaHtml(evB,evA);
+
+  document.getElementById("m225").textContent = fmt(m2A);
+  document.getElementById("m226").textContent = fmt(m2B);
+  document.getElementById("m226").style.color = COLORS.cyan;
+  document.getElementById("m2Delta").innerHTML = deltaHtml(m2B,m2A);
+
+  document.getElementById("avg25").textContent = fmt(avgA);
+  document.getElementById("avg26").textContent = fmt(avgB);
+  document.getElementById("avg26").style.color = COLORS.cyan;
+  document.getElementById("avgDelta").innerHTML = deltaHtml(avgB,avgA);
+
+  document.getElementById("sub25").textContent = fmt(subA);
+  document.getElementById("sub26").textContent = fmt(subB);
+  document.getElementById("sub26").style.color = COLORS.cyan;
+  document.getElementById("subDelta").innerHTML = deltaHtml(subB,subA,true);
+
+  // compare cards
+  const grid = document.getElementById("compareGrid");
+  grid.innerHTML = "";
+  // escala
+  const maxVal = Math.max(...window.flatMap(m=>[aggA[m].m2,aggB[m].m2]));
+  for(const m of window){
+    const a = aggA[m].m2, b = aggB[m].m2;
+    const hA = maxVal>0 ? (a/maxVal)*120 : 0;
+    const hB = maxVal>0 ? (b/maxVal)*120 : 0;
+    const delta = a>0 ? ((b-a)/a)*100 : 0;
+    const card = document.createElement("div");
+    card.className = "compare-card";
+    card.innerHTML = `
+      <div class="compare-month">${m}</div>
+      <div class="compare-bars">
+        <div class="compare-bar y25" style="height:${hA}px"><span>${fmt(a)}</span><div class="compare-bar-label">${yA}</div></div>
+        <div class="compare-bar y26" style="height:${hB}px"><span>${fmt(b)}</span><div class="compare-bar-label">${yB}</div></div>
+      </div>
+      <div class="compare-delta ${delta>=0?'up':'down'}">${delta>=0?'+':''}${fmt1(delta)}%</div>
+      <div class="compare-detail">VARIAÇÃO M²</div>
+    `;
+    grid.appendChild(card);
+  }
+
+  // headline inteligente
+  const evVar = evA>0 ? ((evB-evA)/evA)*100 : 0;
+  const m2Var = m2A>0 ? ((m2B-m2A)/m2A)*100 : 0;
+  const avgVar = avgA>0 ? ((avgB-avgA)/avgA)*100 : 0;
+  let headline = "Operação estável ano contra ano.";
+  let body = "";
+  if(m2Var > 15 && avgVar > 15 && Math.abs(evVar) < 10){
+    headline = `A operação ${yB} está fazendo eventos maiores, não mais eventos.`;
+    body = `A diferença em número de eventos é pequena (${evVar>=0?'+':''}${fmt1(evVar)}%), mas a metragem por evento subiu ${fmt1(avgVar)}%. Operacionalmente: menos coordenação, mais carga por projeto, mais dependência do desempenho de cada entrega individual.`;
+  } else if(evVar > 10 && m2Var > 10){
+    headline = `Operação em expansão consistente: mais eventos e mais metragem.`;
+    body = `Eventos cresceram ${fmt1(evVar)}% e metragem ${fmt1(m2Var)}% no comparativo. Sinal de crescimento orgânico de volume — exige reforço proporcional na coordenação e na frota.`;
+  } else if(m2Var > 10 && evVar < 0){
+    headline = `Menos eventos, mais metragem: estratégia de eventos-âncora.`;
+    body = `Eventos caíram ${fmt1(evVar)}% mas metragem subiu ${fmt1(m2Var)}%. A operação está concentrando esforço em projetos maiores — bom para margem, alto risco de concentração.`;
+  } else if(m2Var < -10){
+    headline = `Sinal de desaceleração no comparativo.`;
+    body = `Metragem caiu ${fmt1(m2Var)}% versus mesma janela do ano anterior. Vale investigar se é sazonalidade do calendário comercial ou queda real de demanda.`;
+  } else {
+    body = `Eventos: ${evVar>=0?'+':''}${fmt1(evVar)}% · Metragem: ${m2Var>=0?'+':''}${fmt1(m2Var)}% · m²/evento: ${avgVar>=0?'+':''}${fmt1(avgVar)}%. Variações moderadas — operação dentro do esperado.`;
+  }
+  document.getElementById("yoyHeadline").textContent = headline;
+  document.getElementById("yoyBody").textContent = body;
+}
+function deltaHtml(a,b,inverse=false){
+  if(b===0) return '<span style="color:var(--text-3)">—</span>';
+  const d = ((a-b)/b)*100;
+  const positive = inverse ? d<=0 : d>=0;
+  return `<span class="${positive?'up':'down'}">${d>=0?'+':''}${fmt1(d)}% vs ${STATE.secondaryYear}</span>`;
+}
+
+/* ============================================================
+   SLIDE 5 · GEOGRAFIA
+   ============================================================ */
+function renderSlide5(){
+  let baseYear = STATE.years.length === 1 ? STATE.years[0] : STATE.secondaryYear;
+  const rows = STATE.rows.filter(r=>r.ano===baseYear);
+  const t = yearTotals(baseYear);
+
+  document.getElementById("totalCitiesGeo").textContent = t.cidades;
+  document.getElementById("totalStates").textContent = t.ufs;
+
+  // mês mais disperso
+  const agg = aggByMonth(baseYear);
+  const monthsWithData = MONTHS.filter(m=>agg[m].eventos>0);
+  const dispMonth = monthsWithData.reduce((a,b)=>agg[a].cidades>agg[b].cidades?a:b);
+  document.getElementById("dispMonth").textContent = dispMonth.slice(0,3);
+  document.getElementById("dispMonthVal").textContent = `${agg[dispMonth].cidades} cidades simultâneas`;
+
+  // DF+SP concentração
+  const dfSp = rows.filter(r=>STATES_HOME.has(r.uf)).length;
+  document.getElementById("dfSpPct").innerHTML = fmt1(dfSp/rows.length*100) + '<span class="unit">%</span>';
+
+  // ranking UF
+  const ufCount = {};
+  rows.forEach(r=>{ ufCount[r.uf] = (ufCount[r.uf]||0)+1; });
+  const ufRanking = Object.entries(ufCount).filter(([u])=>u!=="ND").sort((a,b)=>b[1]-a[1]);
+  const maxUf = ufRanking[0][1];
+  const ufList = document.getElementById("ufList");
+  ufList.innerHTML = "";
+  ufRanking.forEach(([uf,cnt])=>{
+    const pct = (cnt/maxUf)*100;
+    const isHome = STATES_HOME.has(uf);
+    const row = document.createElement("div");
+    row.className = "bar-row";
+    row.innerHTML = `<div class="bar-label">${uf}</div><div class="bar-track"><div class="bar-fill ${isHome?'':'amber'}" style="width:${pct}%">${cnt}</div></div><div class="bar-value">${fmt1(cnt/rows.length*100)}%</div>`;
+    ufList.appendChild(row);
+  });
+
+  // top cities by m²
+  const cityM2 = {};
+  rows.forEach(r=>{ cityM2[r.cidadeNome] = (cityM2[r.cidadeNome]||0)+r.m2; });
+  const cityRanking = Object.entries(cityM2).filter(([c])=>c && c!=="ND").sort((a,b)=>b[1]-a[1]).slice(0,12);
+  const maxCity = cityRanking[0][1];
+  const cityList = document.getElementById("cityList");
+  cityList.innerHTML = "";
+  cityRanking.forEach(([city,m2])=>{
+    const pct = (m2/maxCity)*100;
+    const row = document.createElement("div");
+    row.className = "bar-row";
+    row.innerHTML = `<div class="bar-label" title="${city}">${city.length>18?city.slice(0,16)+'…':city}</div><div class="bar-track"><div class="bar-fill cyan" style="width:${pct}%">${fmt(m2)}</div></div><div class="bar-value">m²</div>`;
+    cityList.appendChild(row);
+  });
+}
+
+/* ============================================================
+   SLIDE 6 · SUBLOCAÇÃO
+   ============================================================ */
+function renderSlide6(){
+  let baseYear = STATE.years.length === 1 ? STATE.years[0] : STATE.secondaryYear;
+  const rows = STATE.rows.filter(r=>r.ano===baseYear);
+  const t = yearTotals(baseYear);
+
+  // separa logística vs saturação
+  const subLog = rows.filter(r=>!STATES_HOME.has(r.uf)).reduce((s,r)=>s+r.sub,0);
+  const subSat = rows.filter(r=>STATES_HOME.has(r.uf)).reduce((s,r)=>s+r.sub,0);
+
+  document.getElementById("subTotal").innerHTML = fmt(t.sub) + '<span class="unit">m²</span>';
+  document.getElementById("subTotalPct").textContent = `${fmt1(t.sub/t.m2*100)}% sobre total operado`;
+  document.getElementById("subLog").innerHTML = fmt(subLog) + '<span class="unit">m²</span>';
+  document.getElementById("subLogPct").textContent = `${fmt1(subLog/Math.max(t.sub,1)*100)}% da sublocação · fora DF/SP`;
+  document.getElementById("subSat").innerHTML = fmt(subSat) + '<span class="unit">m²</span>';
+  document.getElementById("subSatPct").textContent = `${fmt1(subSat/Math.max(t.sub,1)*100)}% da sublocação · em DF/SP`;
+
+  // chart mês a mês
+  const agg = aggByMonth(baseYear);
+  const monthsWithData = MONTHS.filter(m=>agg[m].eventos>0);
+  const subByMonth = monthsWithData.map(m=>{
+    const arr = rows.filter(r=>r.mes===m);
+    const log = arr.filter(r=>!STATES_HOME.has(r.uf)).reduce((s,r)=>s+r.sub,0);
+    const sat = arr.filter(r=>STATES_HOME.has(r.uf)).reduce((s,r)=>s+r.sub,0);
+    return { m, log, sat };
+  });
+
+  const ctx = document.getElementById("chartSub").getContext("2d");
+  CHARTS.sub = new Chart(ctx, {
+    type:"bar",
+    data:{
+      labels: subByMonth.map(d=>d.m.slice(0,3)),
+      datasets:[
+        { label:"Logística (fora DF/SP)", data: subByMonth.map(d=>d.log), backgroundColor:"rgba(255,204,0,0.65)", borderColor:COLORS.yellow, borderWidth:1, borderRadius:5, stack:"s" },
+        { label:"Saturação (DF/SP)", data: subByMonth.map(d=>d.sat), backgroundColor:"rgba(255,31,68,0.70)", borderColor:COLORS.brand, borderWidth:1, borderRadius:5, stack:"s" }
+      ]
+    },
+    options: chartBase({ stacked:true, axisLabels:["","SUBLOCAÇÃO M²"] })
+  });
+
+  // top sub events
+  const topSub = rows.filter(r=>r.sub>0).sort((a,b)=>b.sub-a.sub).slice(0,12);
+  const tbody = document.querySelector("#subEventsTable tbody");
+  tbody.innerHTML = "";
+  topSub.forEach(r=>{
+    const isHome = STATES_HOME.has(r.uf);
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${r.evento.length>40?r.evento.slice(0,38)+'…':r.evento}<br><span class="tag ${isHome?'iled':'grupo'}" style="margin-top:4px">${isHome?'SATURAÇÃO':'LOGÍSTICA'}</span></td><td><span class="tag" style="background:var(--glass-strong);color:var(--text-3)">${r.mes.slice(0,3)}</span></td><td class="num">${fmt(r.m2)}</td><td class="num bold" style="color:#FF5478">${fmt(r.sub)}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+
+/* ============================================================
+   SLIDE 7 · EVENTOS GRANDES
+   ============================================================ */
+function renderSlide7(){
+  let baseYear = STATE.years.length === 1 ? STATE.years[0] : STATE.secondaryYear;
+  const rows = STATE.rows.filter(r=>r.ano===baseYear);
+  const big = rows.filter(r=>r.m2>=200);
+
+  document.getElementById("bigTotal").textContent = big.length;
+  document.getElementById("bigPct").textContent = `${fmt1(big.length/rows.length*100)}% sobre o total de eventos`;
+
+  // por mês
+  const byMonth = MONTHS.map(m=>big.filter(r=>r.mes===m).length);
+  const peakIdx = byMonth.indexOf(Math.max(...byMonth));
+  document.getElementById("bigPeakVal").textContent = byMonth[peakIdx];
+  document.getElementById("bigPeakMonth").textContent = `${MONTHS[peakIdx]} · pico de eventos ≥ 200m²`;
+
+  // maior evento
+  const biggest = rows.reduce((a,b)=>a.m2>b.m2?a:b);
+  document.getElementById("biggestM2").innerHTML = fmt(biggest.m2) + '<span class="unit">m²</span>';
+  document.getElementById("biggestName").textContent = biggest.evento.length>40 ? biggest.evento.slice(0,38)+'…' : biggest.evento;
+
+  // meses críticos
+  const crit = byMonth.filter(v=>v>=10).length;
+  document.getElementById("critMonths").textContent = crit;
+
+  // chart
+  const monthsLabel = MONTHS.map(m=>m.slice(0,3));
+  const ctx = document.getElementById("chartBig").getContext("2d");
+  CHARTS.big = new Chart(ctx, {
+    type:"bar",
+    data:{
+      labels: monthsLabel,
+      datasets:[{
+        label:"Eventos ≥ 200m²",
+        data: byMonth,
+        backgroundColor: byMonth.map(v=>v>=10?'rgba(255,31,68,0.80)':v>=6?'rgba(255,204,0,0.70)':'rgba(10,132,255,0.55)'),
+        borderColor: byMonth.map(v=>v>=10?COLORS.brand:v>=6?COLORS.yellow:COLORS.blue),
+        borderWidth:1.5, borderRadius:8
+      }]
+    },
+    options: chartBase({ axisLabels:["","EVENTOS ≥ 200 M²"] })
+  });
+}
+
+/* ============================================================
+   SLIDE 8 · PROGNÓSTICO
+   ============================================================ */
+function renderSlide8(){
+  // ano base = ano anterior completo. Ano atual parcial = primary
+  let baseYear, currYear;
+  if(STATE.years.length >= 2){
+    baseYear = STATE.secondaryYear;
+    currYear = STATE.primaryYear;
+  } else {
+    baseYear = STATE.years[0];
+    currYear = STATE.years[0];
+  }
+
+  const aggBase = aggByMonth(baseYear);
+  const aggCurr = aggByMonth(currYear);
+
+  // próximo mês a projetar = primeiro mês SEM dados no ano atual
+  let targetIdx = 0;
+  const monthsWithCurr = MONTHS.filter(m=>aggCurr[m].eventos>0);
+  if(monthsWithCurr.length === 0){
+    targetIdx = 0;
+  } else {
+    const lastFilledIdx = MONTHS.indexOf(monthsWithCurr[monthsWithCurr.length-1]);
+    targetIdx = (lastFilledIdx + 1) % 12;
+  }
+  const targetMonth = MONTHS[targetIdx];
+  document.getElementById("forecastMonthTitle").textContent = `${capitalize(targetMonth)} ${currYear===baseYear?currYear:currYear}`;
+
+  // baseline = ano base, mesmo mês
+  const baselineRow = aggBase[targetMonth] || {eventos:0,m2:0,sub:0,cidades:0};
+
+  // variação observada
+  const obsMonths = monthsWithCurr;
+  let factors = { eventos:[], m2:[], sub:[], cidades:[] };
+  for(const m of obsMonths){
+    if(aggBase[m].eventos>0) factors.eventos.push(aggCurr[m].eventos/aggBase[m].eventos);
+    if(aggBase[m].m2>0)      factors.m2.push(aggCurr[m].m2/aggBase[m].m2);
+    if(aggBase[m].cidades>0) factors.cidades.push(aggCurr[m].cidades/aggBase[m].cidades);
+    // sublocação: razão sobre m² do mês atual (taxa de sublocação)
+    if(aggCurr[m].m2>0) factors.sub.push(aggCurr[m].sub/aggCurr[m].m2);
+  }
+
+  function avg(a){ return a.length ? a.reduce((s,v)=>s+v,0)/a.length : 1; }
+  function last(a){ return a.length ? a[a.length-1] : 1; }
+  function best(a){ return a.length ? Math.max(...a) : 1; }
+  function worst(a){ return a.length ? Math.min(...a) : 1; }
+
+  const subRateBase = baselineRow.m2 > 0 ? baselineRow.sub/baselineRow.m2 : 0;
+  const subRateAvg  = factors.sub.length ? avg(factors.sub) : subRateBase;
+  const subRateLast = factors.sub.length ? last(factors.sub) : subRateBase;
+
+  // 3 cenários
+  function buildScenario(factorPick, subPick){
+    const fEv  = factors.eventos.length ? factorPick(factors.eventos) : 1;
+    const fM2  = factors.m2.length      ? factorPick(factors.m2)      : 1;
+    const fCt  = factors.cidades.length ? factorPick(factors.cidades) : 1;
+    const ev   = Math.round(baselineRow.eventos * fEv);
+    const m2   = Math.round(baselineRow.m2 * fM2);
+    const city = Math.round(baselineRow.cidades * fCt);
+    const sub  = Math.round(m2 * subPick);
+    return { ev, m2, city, sub };
+  }
+  const scLow  = buildScenario(worst, Math.min(subRateBase, subRateAvg));
+  const scBase = buildScenario(avg,   subRateAvg);
+  const scHigh = buildScenario(best,  Math.max(subRateAvg, subRateLast));
+
+  function setScen(prefix, sc){
+    document.getElementById(prefix+"Ev").textContent = fmt(sc.ev) + " eventos";
+    document.getElementById(prefix+"M2").textContent = fmt(sc.m2) + " m²";
+    document.getElementById(prefix+"City").textContent = sc.city + " cidades";
+    document.getElementById(prefix+"Sub").textContent = fmt(sc.sub) + " m²";
+  }
+  setScen("scLow", scLow);
+  setScen("scBase", scBase);
+  setScen("scHigh", scHigh);
+
+  // chart histórico + projeção
+  const labels = MONTHS.map(m=>m.slice(0,3));
+  const baseData = MONTHS.map(m=>aggBase[m].m2 || null);
+  const currData = MONTHS.map((m,i)=>{
+    return aggCurr[m].eventos>0 ? aggCurr[m].m2 : null;
+  });
+  // projeção: ponto único no targetMonth
+  const projData = MONTHS.map((m,i)=>i===targetIdx ? scBase.m2 : null);
+  const projLow  = MONTHS.map((m,i)=>i===targetIdx ? scLow.m2  : null);
+  const projHigh = MONTHS.map((m,i)=>i===targetIdx ? scHigh.m2 : null);
+
+  const ctx = document.getElementById("chartForecast").getContext("2d");
+  CHARTS.forecast = new Chart(ctx, {
+    type:"line",
+    data:{
+      labels,
+      datasets:[
+        { label:`${baseYear} (real)`, data: baseData, borderColor:COLORS.mute, backgroundColor:"rgba(139,139,160,.05)", borderWidth:2, borderDash:[4,4], tension:.35, pointRadius:3, pointBackgroundColor:COLORS.mute },
+        { label:`${currYear} (real)`, data: currData, borderColor:COLORS.cyan, backgroundColor:"rgba(0,217,255,.08)", borderWidth:3, tension:.35, pointRadius:5, pointBackgroundColor:COLORS.cyan, pointBorderColor:"#fff", pointBorderWidth:2, spanGaps:false },
+        { label:"Projeção (base)", data: projData, borderColor:COLORS.red, backgroundColor:"rgba(230,25,59,.15)", borderWidth:0, pointRadius:9, pointStyle:"rectRot", pointBackgroundColor:COLORS.red, pointBorderColor:"#fff", pointBorderWidth:2, showLine:false },
+        { label:"Faixa conservadora", data: projLow, borderColor:"transparent", pointRadius:6, pointStyle:"line", pointBackgroundColor:COLORS.amber, pointBorderColor:COLORS.amber, pointBorderWidth:3, showLine:false },
+        { label:"Faixa agressiva", data: projHigh, borderColor:"transparent", pointRadius:6, pointStyle:"line", pointBackgroundColor:COLORS.green, pointBorderColor:COLORS.green, pointBorderWidth:3, showLine:false }
+      ]
+    },
+    options: chartBase({ axisLabels:["","METRAGEM M²"] })
+  });
+}
+function capitalize(s){ return s.charAt(0) + s.slice(1).toLowerCase(); }
+
+/* ============================================================
+   CHART BASE OPTIONS
+   ============================================================ */
+function chartBase(opt={}){
+  const o = {
+    responsive:true, maintainAspectRatio:false,
+    interaction:{ mode:"index", intersect:false },
+    plugins:{
+      legend:{
+        display:true, position:"top", align:"end",
+        labels:{ color:COLORS.mute, font:{ family:"JetBrains Mono", size:10 }, boxWidth:14, boxHeight:8, padding:16, usePointStyle:true }
+      },
+      tooltip:{
+        backgroundColor:"rgba(10,10,12,0.92)", borderColor:COLORS.borderStrong, borderWidth:1,
+        titleColor:COLORS.text, bodyColor:COLORS.text2,
+        titleFont:{ family:"Bricolage Grotesque", size:13, weight:700 },
+        bodyFont:{ family:"JetBrains Mono", size:11 },
+        padding:14, cornerRadius:12, displayColors:true, boxPadding:6,
+        callbacks:{
+          label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y!=null ? ctx.parsed.y.toLocaleString("pt-BR") : "—"}`
+        }
+      }
+    },
+    scales:{
+      x:{
+        grid:{ color:"rgba(255,255,255,0.04)", drawBorder:false },
+        ticks:{ color:COLORS.mute, font:{ family:"JetBrains Mono", size:10, weight:500 } }
+      },
+      y:{
+        grid:{ color:"rgba(255,255,255,0.04)", drawBorder:false },
+        ticks:{ color:COLORS.mute, font:{ family:"JetBrains Mono", size:10 }, callback:v=>v.toLocaleString("pt-BR") },
+        title:{ display:!!opt.axisLabels, text:opt.axisLabels?opt.axisLabels[1]:"", color:COLORS.mute, font:{ family:"JetBrains Mono", size:9, weight:500 } },
+        stacked: !!opt.stacked
+      }
+    }
+  };
+  if(opt.stacked) o.scales.x.stacked = true;
+  if(opt.dualY){
+    o.scales = {
+      x: o.scales.x,
+      y1:{
+        position:"left",
+        grid:{ color:"rgba(255,255,255,0.04)", drawBorder:false },
+        ticks:{ color:COLORS.yellow2, font:{ family:"JetBrains Mono", size:10 } },
+        title:{ display:true, text:"EVENTOS", color:COLORS.yellow2, font:{ family:"JetBrains Mono", size:9, weight:500 } }
+      },
+      y2:{
+        position:"right",
+        grid:{ display:false },
+        ticks:{ color:COLORS.brandSoft, font:{ family:"JetBrains Mono", size:10 }, callback:v=>v.toLocaleString("pt-BR") },
+        title:{ display:true, text:"METRAGEM M²", color:COLORS.brandSoft, font:{ family:"JetBrains Mono", size:9, weight:500 } }
+      }
+    };
+  }
+  return o;
+}
+
+
+/* ============================================================
+   NAVEGAÇÃO DE SLIDES
+   ============================================================ */
+let currentSlide = 0;
+const slides = document.querySelectorAll(".slide");
+const navButtons = document.querySelectorAll("#sideNav button");
+
+function goToSlide(idx){
+  if(idx<0 || idx>=slides.length) return;
+  slides[currentSlide].classList.remove("active");
+  navButtons[currentSlide].classList.remove("active");
+  currentSlide = idx;
+  slides[currentSlide].classList.add("active");
+  navButtons[currentSlide].classList.add("active");
+  document.getElementById("curSlide").textContent = idx+1;
+  document.getElementById("btnPrev").disabled = idx===0;
+  document.getElementById("btnNext").disabled = idx===slides.length-1;
+  window.scrollTo({ top:0, behavior:"smooth" });
+}
+document.getElementById("btnPrev").addEventListener("click", ()=>goToSlide(currentSlide-1));
+document.getElementById("btnNext").addEventListener("click", ()=>goToSlide(currentSlide+1));
+navButtons.forEach(b => b.addEventListener("click", ()=>goToSlide(parseInt(b.dataset.idx))));
+document.addEventListener("keydown", e=>{
+  if(e.key==="ArrowRight" || e.key==="PageDown") goToSlide(currentSlide+1);
+  if(e.key==="ArrowLeft"  || e.key==="PageUp")   goToSlide(currentSlide-1);
+});
+
+/* ============================================================
+   AÇÕES DE TOPO
+   ============================================================ */
+document.getElementById("btnReload").addEventListener("click", loadFromUrl);
+document.getElementById("btnUpload").addEventListener("click", ()=>document.getElementById("fileInput").click());
+document.getElementById("fileInput").addEventListener("change", e=>{
+  const f = e.target.files[0]; if(f) loadFromFile(f);
+});
+document.getElementById("fileFallback").addEventListener("change", e=>{
+  const f = e.target.files[0]; if(f) loadFromFile(f);
+});
+
+// inicia
+goToSlide(0);
+loadFromUrl();
+
+</script>
+</body>
+</html>
